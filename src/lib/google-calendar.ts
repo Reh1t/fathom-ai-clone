@@ -11,7 +11,11 @@ export async function syncUserCalendar(userId: string) {
       throw new Error("No Google account linked")
     }
 
-    const oauth2Client = new google.auth.OAuth2()
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.NEXTAUTH_URL}/api/auth/callback/google`
+    )
     oauth2Client.setCredentials({
       access_token: account.access_token,
       refresh_token: account.refresh_token
@@ -19,14 +23,15 @@ export async function syncUserCalendar(userId: string) {
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
     
-    // Fetch events for the next 24 hours
+    // Fetch events from 30 days ago to 30 days in the future
     const now = new Date()
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    const thirtyDaysFuture = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
     const response = await calendar.events.list({
       calendarId: 'primary',
-      timeMin: now.toISOString(),
-      timeMax: tomorrow.toISOString(),
+      timeMin: thirtyDaysAgo.toISOString(),
+      timeMax: thirtyDaysFuture.toISOString(),
       singleEvents: true,
       orderBy: 'startTime',
     })

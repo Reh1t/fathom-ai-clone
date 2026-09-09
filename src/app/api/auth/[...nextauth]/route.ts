@@ -1,6 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
-import { PrismaAdapter } from "@auth/prisma-adapter"
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import prisma from "@/lib/db"
 
 export const authOptions: NextAuthOptions = {
@@ -9,6 +9,7 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
           scope: "openid email profile https://www.googleapis.com/auth/calendar.readonly",
@@ -26,7 +27,8 @@ export const authOptions: NextAuthOptions = {
       }
       return session
     }
-  }
+  },
+  debug: true
 }
 
 const handler = NextAuth(authOptions)

@@ -1,32 +1,73 @@
 import { Metadata } from "next"
-import { Play, Calendar, Video, Clock, Search, Bot } from "lucide-react"
+import { Play, Calendar, Video, Clock, Search, Bot, LogIn, LogOut, RefreshCcw, PlusCircle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import prisma from "@/lib/db"
 import Link from "next/link"
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
+  const session = await getServerSession(authOptions)
+
+  if (!session || !session.user) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-50 flex flex-col items-center justify-center">
+        <h1 className="text-4xl font-bold mb-4">Fathom AI Clone</h1>
+        <p className="text-zinc-400 mb-8 max-w-md text-center">
+          Sign in to connect your Google Calendar. Our autonomous MeetingBaas bots will automatically join your meetings and transcribe them.
+        </p>
+        <a href="/api/auth/signin">
+          <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700">
+            <LogIn className="w-5 h-5 mr-2" />
+            Sign in with Google
+          </Button>
+        </a>
+      </div>
+    )
+  }
+
   const allMeetings = await prisma.meeting.findMany({
+    where: { userId: (session.user as any).id },
     include: { attendees: true },
     orderBy: { date: 'desc' }
   })
   
-  const upcomingMeetings = allMeetings.filter(m => m.status === "upcoming")
+  const upcomingMeetings = allMeetings
+    .filter(m => m.status === "upcoming")
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    
   const recordedMeetings = allMeetings.filter(m => m.status === "recorded")
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex items-center space-x-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search meetings..." className="pl-8 bg-zinc-900 border-zinc-800" />
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Meetings</h1>
+          <p className="text-zinc-400 mt-1">Welcome back, {session.user.name}</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <form action={async () => {
+            "use server"
+            const { syncUserCalendar } = await import('@/lib/google-calendar')
+            const { revalidatePath } = await import('next/cache')
+            await syncUserCalendar((session.user as any).id)
+            revalidatePath('/')
+          }}>
+            <Button type="submit" variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300">
+              <RefreshCcw className="w-4 h-4 mr-2" /> Sync Calendar
+            </Button>
+          </form>
+          <a href="/api/auth/signout">
+            <Button variant="ghost" className="text-zinc-400 hover:text-zinc-100">
+              <LogOut className="w-4 h-4 mr-2" /> Sign out
+            </Button>
+          </a>
         </div>
       </div>
       
@@ -43,7 +84,7 @@ export default async function DashboardPage() {
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">{meeting.title}</p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(meeting.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • {meeting.duration}
+                      {new Date(meeting.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {new Date(meeting.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • {meeting.duration}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
