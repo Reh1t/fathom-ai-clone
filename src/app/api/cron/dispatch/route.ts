@@ -25,18 +25,16 @@ export async function GET(request: Request) {
     const dispatched = []
 
     for (const meeting of upcomingMeetings) {
-      // Call Recall.ai API
-      const response = await fetch('https://us-west-2.recall.ai/api/v1/bot', {
+      // Call MeetingBaas API
+      const response = await fetch('https://api.meetingbaas.com/bots', {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${process.env.RECALL_API_KEY}`,
+          'x-meeting-baas-api-key': process.env.MEETING_BAAS_API_KEY || '',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           meeting_url: meeting.meetUrl,
-          bot_name: 'Fathom AI Notetaker',
-          // Assuming we configured a webhook URL in the Recall dashboard, or pass it here:
-          // webhook_url: `https://your-domain.vercel.app/api/webhooks/recall`
+          bot_name: 'Fathom AI Notetaker'
         })
       })
 
@@ -44,9 +42,9 @@ export async function GET(request: Request) {
         const botData = await response.json()
         await prisma.meeting.update({
           where: { id: meeting.id },
-          data: { recallId: botData.id }
+          data: { recallId: botData.bot_id } // reusing recallId column for bot_id
         })
-        dispatched.push(botData.id)
+        dispatched.push(botData.bot_id)
       } else {
         console.error('Failed to dispatch bot:', await response.text())
       }
