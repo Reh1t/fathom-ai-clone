@@ -1,0 +1,10 @@
+{
+  "agent-capture": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node .agents/capture.js"
+      }
+    ]
+  }
+}
