@@ -2,9 +2,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { usePlayerStore } from "@/store/player-store"
-import { meetings } from "@/fixtures/meetings"
-import { transcripts, TranscriptLine } from "@/fixtures/transcripts"
-import { summaries, actionItems, SummaryTemplate } from "@/fixtures/summaries"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -12,48 +9,125 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Play, Pause, Scissors, Search, Loader2 } from "lucide-react"
+import { Play, Pause, Scissors, Search, Loader2, Mic } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
-  const id = resolvedParams.id;
+  const resolvedParams = React.use(params)
+  const id = resolvedParams.id
   const searchParams = useSearchParams()
   const isLive = searchParams.get("live") === "true"
 
-  const meeting = meetings.find(m => m.id === id)
-  const fullTranscript = transcripts.filter(t => t.meetingId === id)
-  const meetingActionItems = actionItems.filter(a => a.meetingId === id)
+  const [meeting, setMeeting] = useState<any>(null)
+  const [fullTranscript, setFullTranscript] = useState<any[]>([])
+  const [meetingActionItems, setMeetingActionItems] = useState<any[]>([])
+  const [currentSummary, setCurrentSummary] = useState<any>(null)
 
-  const [activeTemplate, setActiveTemplate] = useState<SummaryTemplate>("Standard")
+  const [activeTemplate, setActiveTemplate] = useState<string>("Standard")
   const [isGenerating, setIsGenerating] = useState(false)
-  const [liveLines, setLiveLines] = useState<TranscriptLine[]>([])
-
+  const [isRecording, setIsRecording] = useState(false)
+  
   const { currentTime, setCurrentTime, isPlaying, setIsPlaying, seekRequest, clearSeekRequest } = usePlayerStore()
   const videoRef = useRef<HTMLVideoElement>(null)
-  const transcriptRef = useRef<HTMLDivElement>(null)
   const activeLineRef = useRef<HTMLDivElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordingStartTimeRef = useRef<number>(0)
 
-  // Simulated live bot logic
+  // Initial Data Fetch
   useEffect(() => {
-    if (!isLive) return
-    let index = 0
-    const interval = setInterval(() => {
-      if (index < fullTranscript.length) {
-        setLiveLines(prev => [...prev, fullTranscript[index]])
-        index++
+    const fetchData = async () => {
+      // In a real app we'd fetch from an API route connected to our DB
+      const res = await fetch(`/api/meetings/${id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setMeeting(data.meeting)
+        setFullTranscript(data.transcripts)
+        setMeetingActionItems(data.actionItems)
+        const summary = data.summaries.find((s: any) => s.template === activeTemplate)
+        setCurrentSummary(summary)
       }
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [isLive, fullTranscript])
+    }
+    fetchData()
+  }, [id, activeTemplate])
 
-  // Template switching loader simulation
-  const handleTemplateChange = (val: string) => {
+  // Audio Capture Logic
+  const startRecording = async () => {
+    try {
+      // Try to capture system audio (like a meeting tab), fallback to microphone
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      } catch (err) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      mediaRecorderRef.current = mediaRecorder
+      recordingStartTimeRef.current = Date.now()
+
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0) {
+          const chunkStartTime = (Date.now() - recordingStartTimeRef.current) / 1000 - 5; // Approx
+          const formData = new FormData()
+          formData.append('file', event.data, 'chunk.webm')
+          formData.append('meetingId', id)
+          formData.append('startTime', Math.max(0, chunkStartTime).toString())
+          
+          try {
+            const res = await fetch('/api/transcribe', {
+              method: 'POST',
+              body: formData
+            })
+            if (res.ok) {
+              const newLines = await res.json()
+              if (newLines.length > 0) {
+                setFullTranscript(prev => [...prev, ...newLines])
+              }
+            }
+          } catch (err) {
+            console.error("Transcription error:", err)
+          }
+        }
+      }
+
+      mediaRecorder.start(5000) // 5 second chunks
+      setIsRecording(true)
+    } catch (err) {
+      console.error("Failed to start recording:", err)
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+    }
+    setIsRecording(false)
+  }
+
+  // Template switching logic
+  const handleTemplateChange = async (val: string) => {
+    setActiveTemplate(val)
     setIsGenerating(true)
-    setActiveTemplate(val as SummaryTemplate)
-    setTimeout(() => {
+    
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meetingId: id, templateType: val })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentSummary(data.summary)
+        if (data.actionItems) {
+          setMeetingActionItems(data.actionItems)
+        }
+      }
+    } catch (err) {
+      console.error("Summary error:", err)
+    } finally {
       setIsGenerating(false)
-    }, 1500)
+    }
   }
 
   // Video sync logic
@@ -72,15 +146,19 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
 
   // Auto-scroll transcript
   useEffect(() => {
-    if (activeLineRef.current) {
+    if (activeLineRef.current && !isLive) {
       activeLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
-  }, [currentTime])
+  }, [currentTime, isLive])
 
-  if (!meeting) return <div className="p-8 text-center text-zinc-400">Meeting not found</div>
+  useEffect(() => {
+    if (isLive && activeLineRef.current) {
+      // Always scroll to bottom when live recording
+      activeLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    }
+  }, [fullTranscript, isLive])
 
-  const displayedTranscript = isLive ? liveLines : fullTranscript
-  const currentSummary = summaries.find(s => s.meetingId === id && s.template === activeTemplate)
+  if (!meeting) return <div className="p-8 text-center text-zinc-400">Loading meeting...</div>
 
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-50 overflow-hidden flex-col md:flex-row">
@@ -92,10 +170,23 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
             <p className="text-sm text-zinc-400">{new Date(meeting.date).toLocaleDateString()} • {meeting.duration}</p>
           </div>
           {isLive && (
-            <Badge variant="outline" className="animate-pulse bg-red-500/10 text-red-500 border-red-500/20">
-              <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
-              Bot Active
-            </Badge>
+            <div className="flex items-center gap-4">
+              {!isRecording ? (
+                <Button onClick={startRecording} size="sm" className="bg-red-600 hover:bg-red-700">
+                  <Mic className="w-4 h-4 mr-2" /> Start Recording
+                </Button>
+              ) : (
+                <Button onClick={stopRecording} variant="destructive" size="sm">
+                  Stop
+                </Button>
+              )}
+              {isRecording && (
+                <Badge variant="outline" className="animate-pulse bg-red-500/10 text-red-500 border-red-500/20">
+                  <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+                  Listening
+                </Badge>
+              )}
+            </div>
           )}
         </div>
 
@@ -103,13 +194,19 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
         <div className="relative aspect-video bg-zinc-900 border-b border-zinc-800 flex items-center justify-center">
           {isLive ? (
             <div className="flex flex-col items-center text-zinc-500">
-              <Loader2 className="w-8 h-8 animate-spin mb-4" />
-              <p>Bot is actively listening...</p>
+              {isRecording ? (
+                <>
+                  <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
+                  <p>Processing 5-second audio chunks with Groq Whisper...</p>
+                </>
+              ) : (
+                <p>Click Start Recording to capture browser/microphone audio.</p>
+              )}
             </div>
           ) : (
             <video 
               ref={videoRef}
-              src={meeting.mediaUrl} 
+              src={meeting.mediaUrl || "https://www.w3schools.com/html/mov_bbb.mp4"} 
               className="w-full h-full object-cover"
               onTimeUpdate={handleTimeUpdate}
               controls
@@ -125,17 +222,18 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
             <h3 className="text-sm font-medium text-zinc-400">Transcript</h3>
             <Button variant="ghost" size="sm" className="h-7 text-xs"><Search className="w-3 h-3 mr-2"/>Search</Button>
           </div>
-          <ScrollArea className="flex-1 p-4" ref={transcriptRef}>
-            <div className="space-y-6">
-              {displayedTranscript.length === 0 && isLive && (
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-6 pb-20">
+              {fullTranscript.length === 0 && isLive && (
                 <p className="text-sm text-zinc-500 text-center italic mt-10">Waiting for speech...</p>
               )}
-              {displayedTranscript.map((line, i) => {
+              {fullTranscript.map((line, i) => {
                 const isActive = !isLive && currentTime >= line.startTime && currentTime < line.endTime
+                const isLast = i === fullTranscript.length - 1
                 return (
                   <div 
                     key={line.id} 
-                    ref={isActive ? activeLineRef : null}
+                    ref={isActive || (isLive && isLast) ? activeLineRef : null}
                     onClick={() => !isLive && usePlayerStore.getState().seekTo(line.startTime)}
                     className={`flex gap-4 group cursor-pointer p-2 -mx-2 rounded-md transition-colors ${isActive ? 'bg-zinc-800/60' : 'hover:bg-zinc-900/50'}`}
                   >
@@ -150,11 +248,6 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                         {line.text}
                       </p>
                     </div>
-                    {!isLive && (
-                      <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-6 w-6"><Scissors className="w-3 h-3"/></Button>
-                      </div>
-                    )}
                   </div>
                 )
               })}
@@ -182,6 +275,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                 <div className="h-4 bg-zinc-800 rounded animate-pulse w-5/6"></div>
                 <div className="h-4 bg-zinc-800 rounded animate-pulse w-full"></div>
                 <div className="h-4 bg-zinc-800 rounded animate-pulse w-1/2"></div>
+                <p className="text-xs text-indigo-400 mt-4 text-center">Gemini is generating...</p>
               </div>
             ) : (
               <AnimatePresence mode="wait">
@@ -193,37 +287,39 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                   className="prose prose-invert prose-sm max-w-none"
                 >
                   {isLive ? (
-                    <p className="text-zinc-500 italic text-center mt-10">Summary will generate once meeting concludes.</p>
+                    <div className="text-center mt-10">
+                      <p className="text-zinc-500 italic mb-4">Summary will generate once meeting concludes.</p>
+                      <Button onClick={() => handleTemplateChange(activeTemplate)} size="sm" variant="outline">
+                        Force Generate Now
+                      </Button>
+                    </div>
                   ) : currentSummary ? (
                     <div className="space-y-4 whitespace-pre-wrap text-zinc-300 leading-relaxed">
-                      {/* Very basic markdown rendering for the stubbed content */}
-                      {currentSummary.contentMarkdown.split('\n').map((line, i) => {
+                      {currentSummary.contentMarkdown.split('\n').map((line: string, i: number) => {
                         if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-semibold text-zinc-100 mt-6 mb-2">{line.replace('## ', '')}</h2>
                         if (line.startsWith('### ')) return <h3 key={i} className="text-md font-medium text-zinc-200 mt-4 mb-2">{line.replace('### ', '')}</h3>
                         if (line.startsWith('- **')) return <li key={i} className="ml-4 list-disc"><span className="font-semibold text-indigo-300">{line.match(/\*\*(.*?)\*\*/)?.[1]}</span> {line.replace(/- \*\*(.*?)\*\*:/, '')}</li>
-                        if (line.startsWith('- [ ]')) return <li key={i} className="ml-4 list-none flex items-start gap-2 mt-2"><Checkbox className="mt-1" /> <span>{line.replace('- [ ]', '')}</span></li>
                         if (line.startsWith('- ')) return <li key={i} className="ml-4 list-disc">{line.replace('- ', '')}</li>
                         if (line.match(/^\d+\./)) return <li key={i} className="ml-4 list-decimal">{line.replace(/^\d+\.\s/, '')}</li>
-                        if (line.includes('**')) {
-                            const parts = line.split('**');
-                            return <p key={i}>{parts.map((p, j) => j % 2 === 1 ? <span key={j} className="font-semibold text-zinc-100">{p}</span> : p)}</p>
-                        }
                         if (line.trim() === '') return <br key={i} />
                         return <p key={i}>{line}</p>
                       })}
                     </div>
                   ) : (
-                    <p>No summary available for this template.</p>
+                    <div className="text-center mt-10">
+                      <p className="text-zinc-500 mb-4">No summary generated yet.</p>
+                      <Button onClick={() => handleTemplateChange(activeTemplate)}>Generate with Gemini</Button>
+                    </div>
                   )}
                 </motion.div>
               </AnimatePresence>
             )}
 
-            {!isLive && activeTemplate !== "ActionItems" && meetingActionItems.length > 0 && (
+            {!isGenerating && meetingActionItems.length > 0 && (
               <div className="mt-12 pt-6 border-t border-zinc-800">
                 <h3 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">Detected Actions</h3>
                 <div className="space-y-3">
-                  {meetingActionItems.map(item => (
+                  {meetingActionItems.map((item: any) => (
                     <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
                       <Checkbox id={item.id} defaultChecked={item.isCompleted} className="mt-1" />
                       <div className="grid gap-1.5 leading-none flex-1">

@@ -4,12 +4,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { meetings } from "@/fixtures/meetings"
+import prisma from "@/lib/db"
 import Link from "next/link"
 
-export default function DashboardPage() {
-  const upcomingMeetings = meetings.filter(m => m.status === "upcoming")
-  const recordedMeetings = meetings.filter(m => m.status === "recorded")
+export const dynamic = 'force-dynamic'
+
+export default async function DashboardPage() {
+  const allMeetings = await prisma.meeting.findMany({
+    include: { attendees: true },
+    orderBy: { date: 'desc' }
+  })
+  
+  const upcomingMeetings = allMeetings.filter(m => m.status === "upcoming")
+  const recordedMeetings = allMeetings.filter(m => m.status === "recorded")
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
