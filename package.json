@@ -10,6 +10,7 @@
     "postinstall": "prisma skills sync || exit 0"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.3",
     "@base-ui/react": "^1.8.0",
     "@google/genai": "^2.21.0",
     "@prisma/client": "^6.19.3",
@@ -18,9 +19,11 @@
     "cn": "^0.2.6",
     "date-fns": "^4.4.0",
     "framer-motion": "^13.2.0",
+    "googleapis": "^178.1.1",
     "groq-sdk": "^1.6.0",
     "lucide-react": "^1.43.0",
     "next": "16.3.4",
+    "next-auth": "^4.24.15",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shadcn": "^4.21.0",

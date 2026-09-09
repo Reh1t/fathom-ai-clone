@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Play, Pause, Scissors, Search, Loader2, Mic } from "lucide-react"
+import { Play, Pause, Scissors, Search, Loader2, Bot } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,18 +25,14 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
 
   const [activeTemplate, setActiveTemplate] = useState<string>("Standard")
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
   
   const { currentTime, setCurrentTime, isPlaying, setIsPlaying, seekRequest, clearSeekRequest } = usePlayerStore()
   const videoRef = useRef<HTMLVideoElement>(null)
   const activeLineRef = useRef<HTMLDivElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const recordingStartTimeRef = useRef<number>(0)
 
-  // Initial Data Fetch
+  // Fetch Data (could poll here if `isLive` is true to show transcript arriving from webhook)
   useEffect(() => {
     const fetchData = async () => {
-      // In a real app we'd fetch from an API route connected to our DB
       const res = await fetch(`/api/meetings/${id}`)
       if (res.ok) {
         const data = await res.json()
@@ -48,64 +44,14 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
       }
     }
     fetchData()
-  }, [id, activeTemplate])
-
-  // Audio Capture Logic
-  const startRecording = async () => {
-    try {
-      // Try to capture system audio (like a meeting tab), fallback to microphone
-      let stream: MediaStream
-      try {
-        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-      } catch (err) {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      }
-      
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
-      mediaRecorderRef.current = mediaRecorder
-      recordingStartTimeRef.current = Date.now()
-
-      mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
-          const chunkStartTime = (Date.now() - recordingStartTimeRef.current) / 1000 - 5; // Approx
-          const formData = new FormData()
-          formData.append('file', event.data, 'chunk.webm')
-          formData.append('meetingId', id)
-          formData.append('startTime', Math.max(0, chunkStartTime).toString())
-          
-          try {
-            const res = await fetch('/api/transcribe', {
-              method: 'POST',
-              body: formData
-            })
-            if (res.ok) {
-              const newLines = await res.json()
-              if (newLines.length > 0) {
-                setFullTranscript(prev => [...prev, ...newLines])
-              }
-            }
-          } catch (err) {
-            console.error("Transcription error:", err)
-          }
-        }
-      }
-
-      mediaRecorder.start(5000) // 5 second chunks
-      setIsRecording(true)
-    } catch (err) {
-      console.error("Failed to start recording:", err)
+    
+    let interval: any;
+    if (isLive) {
+      interval = setInterval(fetchData, 5000) // Poll every 5s for webhook updates
     }
-  }
+    return () => clearInterval(interval)
+  }, [id, activeTemplate, isLive])
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop()
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
-    }
-    setIsRecording(false)
-  }
-
-  // Template switching logic
   const handleTemplateChange = async (val: string) => {
     setActiveTemplate(val)
     setIsGenerating(true)
@@ -153,7 +99,6 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     if (isLive && activeLineRef.current) {
-      // Always scroll to bottom when live recording
       activeLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
   }, [fullTranscript, isLive])
@@ -162,7 +107,6 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-50 overflow-hidden flex-col md:flex-row">
-      {/* Left Col - Media & Transcript */}
       <div className="flex-1 flex flex-col border-r border-zinc-800 h-full">
         <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
           <div>
@@ -170,23 +114,10 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
             <p className="text-sm text-zinc-400">{new Date(meeting.date).toLocaleDateString()} • {meeting.duration}</p>
           </div>
           {isLive && (
-            <div className="flex items-center gap-4">
-              {!isRecording ? (
-                <Button onClick={startRecording} size="sm" className="bg-red-600 hover:bg-red-700">
-                  <Mic className="w-4 h-4 mr-2" /> Start Recording
-                </Button>
-              ) : (
-                <Button onClick={stopRecording} variant="destructive" size="sm">
-                  Stop
-                </Button>
-              )}
-              {isRecording && (
-                <Badge variant="outline" className="animate-pulse bg-red-500/10 text-red-500 border-red-500/20">
-                  <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
-                  Listening
-                </Badge>
-              )}
-            </div>
+            <Badge variant="outline" className="animate-pulse bg-red-500/10 text-red-500 border-red-500/20">
+              <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+              Recall.ai Bot Active
+            </Badge>
           )}
         </div>
 
@@ -194,14 +125,9 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
         <div className="relative aspect-video bg-zinc-900 border-b border-zinc-800 flex items-center justify-center">
           {isLive ? (
             <div className="flex flex-col items-center text-zinc-500">
-              {isRecording ? (
-                <>
-                  <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
-                  <p>Processing 5-second audio chunks with Groq Whisper...</p>
-                </>
-              ) : (
-                <p>Click Start Recording to capture browser/microphone audio.</p>
-              )}
+              <Bot className="w-12 h-12 mb-4 text-indigo-500 animate-pulse" />
+              <p>The Recall.ai bot is currently in your meeting listening.</p>
+              <p className="text-sm mt-2">The transcript will populate automatically via webhooks.</p>
             </div>
           ) : (
             <video 
@@ -225,7 +151,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-6 pb-20">
               {fullTranscript.length === 0 && isLive && (
-                <p className="text-sm text-zinc-500 text-center italic mt-10">Waiting for speech...</p>
+                <p className="text-sm text-zinc-500 text-center italic mt-10">Waiting for webhook payloads...</p>
               )}
               {fullTranscript.map((line, i) => {
                 const isActive = !isLive && currentTime >= line.startTime && currentTime < line.endTime
@@ -288,10 +214,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                 >
                   {isLive ? (
                     <div className="text-center mt-10">
-                      <p className="text-zinc-500 italic mb-4">Summary will generate once meeting concludes.</p>
-                      <Button onClick={() => handleTemplateChange(activeTemplate)} size="sm" variant="outline">
-                        Force Generate Now
-                      </Button>
+                      <p className="text-zinc-500 italic mb-4">Summary will generate once Recall.ai bot leaves and webhook fires.</p>
                     </div>
                   ) : currentSummary ? (
                     <div className="space-y-4 whitespace-pre-wrap text-zinc-300 leading-relaxed">
