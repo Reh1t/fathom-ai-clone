@@ -17,17 +17,62 @@ export default async function DashboardPage() {
 
   if (!session || !session.user) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-50 flex flex-col items-center justify-center">
-        <h1 className="text-4xl font-bold mb-4">Fathom AI Clone</h1>
-        <p className="text-zinc-400 mb-8 max-w-md text-center">
-          Sign in to connect your Google Calendar. Our autonomous MeetingBaas bots will automatically join your meetings and transcribe them.
-        </p>
-        <a href="/api/auth/signin">
-          <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-            <LogIn className="w-5 h-5 mr-2" />
-            Sign in with Google
-          </Button>
-        </a>
+      <div className="min-h-screen bg-zinc-950 text-zinc-50">
+        {/* Navigation */}
+        <nav className="flex items-center justify-between p-6 border-b border-zinc-800">
+          <div className="flex items-center gap-2">
+            <Bot className="w-8 h-8 text-indigo-500" />
+            <span className="text-xl font-bold">Fathom AI Clone</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <Link href="/privacy" className="text-sm text-zinc-400 hover:text-white">Privacy</Link>
+            <Link href="/terms" className="text-sm text-zinc-400 hover:text-white">Terms</Link>
+            <a href="/api/auth/signin">
+              <Button className="bg-indigo-600 hover:bg-indigo-700">Sign In</Button>
+            </a>
+          </div>
+        </nav>
+
+        {/* Hero Section */}
+        <main className="flex flex-col items-center justify-center py-24 px-4 text-center">
+          <Badge variant="outline" className="mb-6 border-indigo-500/30 text-indigo-400">
+            Autonomous Meeting Intelligence
+          </Badge>
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight max-w-4xl">
+            Never take meeting notes manually again.
+          </h1>
+          <p className="text-xl text-zinc-400 mb-10 max-w-2xl">
+            Connect your Google Calendar. Our autonomous bots join your Zoom and Google Meet calls, transcribe the conversation, and generate AI action items instantly.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <a href="/api/auth/signin">
+              <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700 h-14 px-8 text-lg">
+                <LogIn className="w-5 h-5 mr-2" />
+                Connect Google Calendar
+              </Button>
+            </a>
+          </div>
+
+          {/* Feature Grid */}
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mt-24 text-left">
+            <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
+              <Calendar className="w-10 h-10 text-indigo-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Calendar Sync</h3>
+              <p className="text-zinc-400">We request calendar.readonly access to monitor your schedule and find upcoming video conferences automatically.</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
+              <Bot className="w-10 h-10 text-indigo-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Autonomous Bots</h3>
+              <p className="text-zinc-400">MeetingBaas agents join your calls seamlessly to capture high-quality audio without any desktop software.</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
+              <Video className="w-10 h-10 text-indigo-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">AI Summaries</h3>
+              <p className="text-zinc-400">Powered by Gemini 2.5 Flash, get instant executive summaries and extracted action items right after the call ends.</p>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
