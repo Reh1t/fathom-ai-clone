@@ -17,7 +17,7 @@ export const generateLongTranscript = (meetingId: string): TranscriptLine[] => {
     const duration = Math.floor(Math.random() * 10) + 5; // 5-15 seconds per line
     
     lines.push({
-      id: `t_${meetingId}_${i}`,
+      id: crypto.randomUUID(),
       meetingId,
       speaker,
       text: `This is a simulated statement for line ${i + 1}. We are discussing the Q3 metrics and how they relate to our overall growth strategy. ${speaker} believes we need to focus more on retention. I agree, but acquisition is also key.`,
