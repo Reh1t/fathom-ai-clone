@@ -17,7 +17,7 @@ export async function GET(request: Request) {
         recallId: null, // Not yet dispatched
         date: {
           lte: fiveMinsFromNow,
-          gte: now
+          gte: new Date(now.getTime() - 30 * 60000) // Look back 30 mins just in case
         }
       }
     })
