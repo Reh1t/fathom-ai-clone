@@ -26,29 +26,24 @@ export async function POST(request: Request) {
       if (botRes.ok) {
         const botData = await botRes.json()
         
-        // Mark meeting as recorded and save video URL from the bot data
-        const videoUrl = botData.video_url || null
-        await prisma.meeting.update({
-          where: { id: meeting.id },
-          data: { status: 'recorded', mediaUrl: videoUrl }
-        })
-        
-        // recallai_streaming provides the transcript in botData.video_url's associated recording object
-        // Usually found in botData.bot_recordings or just by iterating recordings? Wait, wait.
-        // Actually, we can just grab the transcript URL from the first recording that has it.
-        // But what if it's not ready yet? Wait.
-        // Let's just try fetching it from the transcript endpoint as a fallback, AND check media_shortcuts.
-        // The safest way is to hit the media_shortcuts endpoint.
-        
         let transcriptData: any[] = []
         let transcriptUrl = ''
+        let videoUrl = ''
 
-        // Find the download URL in bot_recordings
+        // Find the download URL in bot_recordings or recordings
         if (botData.bot_recordings && botData.bot_recordings.length > 0) {
           transcriptUrl = botData.bot_recordings[0]?.media_shortcuts?.transcript?.data?.download_url || ''
+          videoUrl = botData.bot_recordings[0]?.media_shortcuts?.video_mixed?.data?.download_url || ''
         } else if (botData.recordings && botData.recordings.length > 0) {
           transcriptUrl = botData.recordings[0]?.media_shortcuts?.transcript?.data?.download_url || ''
+          videoUrl = botData.recordings[0]?.media_shortcuts?.video_mixed?.data?.download_url || ''
         }
+
+        // Mark meeting as recorded and save video URL from the bot data
+        await prisma.meeting.update({
+          where: { id: meeting.id },
+          data: { status: 'recorded', mediaUrl: videoUrl || null }
+        })
         
         if (transcriptUrl) {
           const tRes = await fetch(transcriptUrl)
