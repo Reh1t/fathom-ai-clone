@@ -5,8 +5,11 @@ export async function POST(request: Request) {
   try {
     const payload = await request.json()
     
-    // Recall.ai sends 'bot.done' when the bot finishes processing the meeting
-    if (payload.event === 'bot.done') {
+    // Accept both 'bot.done' and 'bot.status_change' with 'done' just in case their JSON mapping differs from the UI
+    const isDone = payload.event === 'bot.done' || 
+                  (payload.event === 'bot.status_change' && payload.data?.status?.code === 'done')
+                  
+    if (isDone) {
       const botId = payload.data?.bot_id || payload.bot_id
       
       const meeting = await prisma.meeting.findUnique({ where: { recallId: botId } })
