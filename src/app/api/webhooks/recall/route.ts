@@ -67,13 +67,31 @@ export async function POST(request: Request) {
         
         // Recall.ai returns an array of transcript segments
         for (const segment of transcriptData) {
+          // The streaming transcript format has speaker name inside participant.name
+          const speakerName = segment.participant?.name || segment.speaker || segment.name || 'Unknown'
+          const text = segment.words?.map((w: any) => w.text).join(' ') || segment.text || ''
+          
+          if (!text.trim()) continue;
+
+          // The streaming transcript format has timestamps as objects with 'relative' and 'absolute' fields
+          const firstWord = segment.words?.[0]
+          const lastWord = segment.words?.[segment.words.length - 1]
+          
+          const getTimestamp = (wordTs: any, segmentTs: any) => {
+            if (wordTs?.relative !== undefined) return wordTs.relative
+            if (typeof wordTs === 'number') return wordTs
+            if (segmentTs?.relative !== undefined) return segmentTs.relative
+            if (typeof segmentTs === 'number') return segmentTs
+            return 0
+          }
+
           await prisma.transcriptLine.create({
             data: {
               meetingId: meeting.id,
-              speaker: segment.speaker || segment.name || 'Unknown',
-              text: segment.words?.map((w: any) => w.text).join(' ') || segment.text || '',
-              startTime: segment.words?.[0]?.start_timestamp || segment.start_timestamp || 0,
-              endTime: segment.words?.[segment.words.length - 1]?.end_timestamp || segment.end_timestamp || 0
+              speaker: speakerName,
+              text,
+              startTime: getTimestamp(firstWord?.start_timestamp, segment.start_timestamp),
+              endTime: getTimestamp(lastWord?.end_timestamp, segment.end_timestamp)
             }
           })
         }
