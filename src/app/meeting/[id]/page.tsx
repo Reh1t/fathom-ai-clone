@@ -9,8 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Play, Pause, Scissors, Search, Loader2, Bot } from "lucide-react"
+import { Play, Pause, Scissors, Search, Loader2, Bot, ArrowLeft } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import Link from "next/link"
 
 export default function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params)
@@ -133,9 +134,16 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
     <div className="flex h-screen bg-zinc-950 text-zinc-50 overflow-hidden flex-col md:flex-row font-sans">
       <div className="flex-1 flex flex-col border-r border-zinc-800 h-full overflow-hidden">
         <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50 shrink-0">
-          <div>
-            <h1 className="font-semibold text-lg">{meeting.title}</h1>
-            <p className="text-sm text-zinc-400">{new Date(meeting.date).toLocaleDateString()} • {meeting.duration}</p>
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="font-semibold text-lg">{meeting.title}</h1>
+              <p className="text-sm text-zinc-400">{new Date(meeting.date).toLocaleDateString()} • {meeting.duration}</p>
+            </div>
           </div>
           {isLive && (
             <Badge variant="outline" className="animate-pulse bg-red-500/10 text-red-500 border-red-500/20">
