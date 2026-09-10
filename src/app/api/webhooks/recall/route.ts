@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       if (!meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
 
       // Fetch transcript from Recall.ai
-      const response = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${botId}/transcript`, {
+      const response = await fetch(`https://ap-northeast-1.recall.ai/api/v1/bot/${botId}/transcript`, {
         headers: {
           'Authorization': `Token ${process.env.RECALL_API_KEY || ''}`
         }
