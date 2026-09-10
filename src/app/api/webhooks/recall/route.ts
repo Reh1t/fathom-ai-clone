@@ -12,6 +12,12 @@ export async function POST(request: Request) {
       const meeting = await prisma.meeting.findUnique({ where: { recallId: botId } })
       if (!meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
 
+      // Mark meeting as recorded immediately so it shows up in dashboard
+      await prisma.meeting.update({
+        where: { id: meeting.id },
+        data: { status: 'recorded' }
+      })
+
       // Fetch transcript from Recall.ai
       const response = await fetch(`https://ap-northeast-1.recall.ai/api/v1/bot/${botId}/transcript`, {
         headers: {
@@ -19,34 +25,29 @@ export async function POST(request: Request) {
         }
       })
       
-      if (!response.ok) return NextResponse.json({ error: 'Failed to fetch transcript' }, { status: 500 })
-      const transcriptData = await response.json()
-      
-      // Recall.ai returns an array of transcript segments
-      for (const segment of transcriptData) {
-        await prisma.transcriptLine.create({
-          data: {
-            meetingId: meeting.id,
-            speaker: segment.speaker || 'Unknown',
-            text: segment.words?.map((w: any) => w.text).join(' ') || segment.text || '',
-            startTime: segment.words?.[0]?.start_timestamp || 0,
-            endTime: segment.words?.[segment.words.length - 1]?.end_timestamp || 0
-          }
+      if (response.ok) {
+        const transcriptData = await response.json()
+        
+        // Recall.ai returns an array of transcript segments
+        for (const segment of transcriptData) {
+          await prisma.transcriptLine.create({
+            data: {
+              meetingId: meeting.id,
+              speaker: segment.speaker || 'Unknown',
+              text: segment.words?.map((w: any) => w.text).join(' ') || segment.text || '',
+              startTime: segment.words?.[0]?.start_timestamp || 0,
+              endTime: segment.words?.[segment.words.length - 1]?.end_timestamp || 0
+            }
+          })
+        }
+
+        // Immediately invoke our Gemini summarizer
+        await fetch(`${process.env.NEXTAUTH_URL}/api/summarize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meetingId: meeting.id, templateType: 'Standard' })
         })
       }
-
-      // Mark meeting as recorded
-      await prisma.meeting.update({
-        where: { id: meeting.id },
-        data: { status: 'recorded' }
-      })
-
-      // Immediately invoke our Gemini summarizer
-      await fetch(`${process.env.NEXTAUTH_URL}/api/summarize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meetingId: meeting.id, templateType: 'Standard' })
-      })
     }
 
     return NextResponse.json({ success: true })

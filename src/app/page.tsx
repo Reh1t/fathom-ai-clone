@@ -83,8 +83,9 @@ export default async function DashboardPage() {
     orderBy: { date: 'desc' }
   })
   
+  const now = new Date()
   const upcomingMeetings = allMeetings
-    .filter(m => m.status === "upcoming")
+    .filter(m => m.status === "upcoming" && new Date(m.date).getTime() > now.getTime() - 60 * 60 * 1000)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     
   const recordedMeetings = allMeetings.filter(m => m.status === "recorded")

@@ -34,7 +34,10 @@ export async function GET(request: Request) {
         },
         body: JSON.stringify({
           meeting_url: meeting.meetUrl,
-          bot_name: 'Fathom AI Notetaker'
+          bot_name: 'Fathom AI Notetaker',
+          transcription_options: {
+            provider: 'default'
+          }
         })
       })
 
