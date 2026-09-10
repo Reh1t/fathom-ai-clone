@@ -104,6 +104,8 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
   const handleChat = async () => {
     if (!chatInput.trim()) return
     const msg = chatInput
+    const currentHistory = [...chatMessages]
+    
     setChatInput("")
     setChatMessages(prev => [...prev, { role: 'user', text: msg }])
     setIsChatting(true)
@@ -112,7 +114,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meetingId: id, question: msg })
+        body: JSON.stringify({ meetingId: id, question: msg, history: currentHistory })
       })
       if (res.ok) {
         const data = await res.json()
@@ -128,9 +130,9 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
   if (!meeting) return <div className="p-8 text-center text-zinc-400">Loading meeting...</div>
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-50 overflow-hidden flex-col md:flex-row">
-      <div className="flex-1 flex flex-col border-r border-zinc-800 h-full">
-        <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+    <div className="flex h-screen bg-zinc-950 text-zinc-50 overflow-hidden flex-col md:flex-row font-sans">
+      <div className="flex-1 flex flex-col border-r border-zinc-800 h-full overflow-hidden">
+        <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50 shrink-0">
           <div>
             <h1 className="font-semibold text-lg">{meeting.title}</h1>
             <p className="text-sm text-zinc-400">{new Date(meeting.date).toLocaleDateString()} • {meeting.duration}</p>
@@ -144,7 +146,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Media Player Area */}
-        <div className="relative aspect-video bg-zinc-900 border-b border-zinc-800 flex items-center justify-center">
+        <div className="relative aspect-video bg-zinc-900 border-b border-zinc-800 flex items-center justify-center shrink-0">
           {isLive ? (
             <div className="flex flex-col items-center text-zinc-500">
               <Bot className="w-12 h-12 mb-4 text-indigo-500 animate-pulse" />
@@ -165,8 +167,8 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Transcript Area */}
-        <div className="flex-1 flex flex-col min-h-0 bg-zinc-950">
-          <div className="p-3 border-b border-zinc-800 bg-zinc-900/30 flex items-center justify-between">
+        <div className="flex-1 flex flex-col min-h-0 bg-zinc-950 overflow-hidden">
+          <div className="p-3 border-b border-zinc-800 bg-zinc-900/30 flex items-center justify-between shrink-0">
             <h3 className="text-sm font-medium text-zinc-400">Transcript</h3>
             <Button variant="ghost" size="sm" className="h-7 text-xs"><Search className="w-3 h-3 mr-2"/>Search</Button>
           </div>
@@ -205,12 +207,12 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
       </div>
 
       {/* Right Col - Summaries & Actions */}
-      <div className="w-full md:w-[450px] bg-zinc-900/30 flex flex-col h-full border-l border-zinc-800">
-        <Tabs value={activeTemplate} onValueChange={handleTemplateChange} className="flex-1 flex flex-col h-full">
-          <div className="p-4 border-b border-zinc-800 bg-zinc-950">
+      <div className="w-full md:w-[450px] bg-zinc-900/30 flex flex-col h-full border-l border-zinc-800 shrink-0">
+        <Tabs value={activeTemplate} onValueChange={handleTemplateChange} className="flex-1 flex flex-col h-full overflow-hidden">
+          <div className="p-4 border-b border-zinc-800 bg-zinc-950 shrink-0">
             <TabsList className="w-full bg-zinc-900 border border-zinc-800">
-              <TabsTrigger value="Standard" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Standard</TabsTrigger>
-              <TabsTrigger value="Executive" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Executive</TabsTrigger>
+              <TabsTrigger value="Standard" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Summary</TabsTrigger>
+              <TabsTrigger value="Executive" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Action Items</TabsTrigger>
               <TabsTrigger value="Chat" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Chat AI</TabsTrigger>
             </TabsList>
           </div>
