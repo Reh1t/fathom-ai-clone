@@ -132,7 +132,7 @@ export default async function DashboardPage() {
                     <div className="flex-1 space-y-1">
                       <p className={`text-sm font-medium leading-none ${isPassed ? 'text-zinc-400 line-through' : ''}`}>{meeting.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(meeting.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {new Date(meeting.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • {meeting.duration}
+                        {new Date(meeting.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Karachi' })} at {new Date(meeting.date).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Karachi'})} • {meeting.duration}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
