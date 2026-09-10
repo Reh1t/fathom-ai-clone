@@ -10,25 +10,28 @@ export async function POST(request: Request) {
                   (payload.event === 'bot.status_change' && payload.data?.status?.code === 'done')
                   
     if (isDone) {
-      const botId = payload.data?.bot_id || payload.bot_id
+      // The payload structure is payload.data.bot.id for 'bot.done'
+      const botId = payload.data?.bot?.id || payload.data?.bot_id || payload.bot_id
       
+      if (!botId) return NextResponse.json({ error: 'Missing bot ID in payload' }, { status: 400 })
+
       const meeting = await prisma.meeting.findUnique({ where: { recallId: botId } })
       if (!meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
 
-      // Mark meeting as recorded and save video URL
-      const videoUrl = payload.data?.video_url || null
-      await prisma.meeting.update({
-        where: { id: meeting.id },
-        data: { status: 'recorded', mediaUrl: videoUrl }
-      })
-
-      // Fetch full bot details from Recall.ai to get the transcript shortcut URL
+      // Fetch full bot details from Recall.ai to get the video URL and transcript shortcut URL
       const botRes = await fetch(`https://ap-northeast-1.recall.ai/api/v1/bot/${botId}`, {
         headers: { 'Authorization': `Token ${process.env.RECALL_API_KEY || ''}` }
       })
       
       if (botRes.ok) {
         const botData = await botRes.json()
+        
+        // Mark meeting as recorded and save video URL from the bot data
+        const videoUrl = botData.video_url || null
+        await prisma.meeting.update({
+          where: { id: meeting.id },
+          data: { status: 'recorded', mediaUrl: videoUrl }
+        })
         
         // recallai_streaming provides the transcript in botData.video_url's associated recording object
         // Usually found in botData.bot_recordings or just by iterating recordings? Wait, wait.
