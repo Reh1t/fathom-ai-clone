@@ -97,11 +97,33 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
     }
   }, [currentTime, isLive])
 
-  useEffect(() => {
-    if (isLive && activeLineRef.current) {
-      activeLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  const [chatInput, setChatInput] = useState("")
+  const [chatMessages, setChatMessages] = useState<{role: 'user'|'ai', text: string}[]>([])
+  const [isChatting, setIsChatting] = useState(false)
+
+  const handleChat = async () => {
+    if (!chatInput.trim()) return
+    const msg = chatInput
+    setChatInput("")
+    setChatMessages(prev => [...prev, { role: 'user', text: msg }])
+    setIsChatting(true)
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meetingId: id, question: msg })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setChatMessages(prev => [...prev, { role: 'ai', text: data.reply }])
+      }
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: 'ai', text: 'Sorry, I encountered an error answering that.' }])
+    } finally {
+      setIsChatting(false)
     }
-  }, [fullTranscript, isLive])
+  }
 
   if (!meeting) return <div className="p-8 text-center text-zinc-400">Loading meeting...</div>
 
@@ -150,8 +172,8 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
           </div>
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-6 pb-20">
-              {fullTranscript.length === 0 && isLive && (
-                <p className="text-sm text-zinc-500 text-center italic mt-10">Waiting for webhook payloads...</p>
+              {fullTranscript.length === 0 && (
+                <p className="text-sm text-zinc-500 text-center italic mt-10">No transcript available.</p>
               )}
               {fullTranscript.map((line, i) => {
                 const isActive = !isLive && currentTime >= line.startTime && currentTime < line.endTime
@@ -183,18 +205,56 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
       </div>
 
       {/* Right Col - Summaries & Actions */}
-      <div className="w-full md:w-96 bg-zinc-900/30 flex flex-col h-full border-l border-zinc-800">
+      <div className="w-full md:w-[450px] bg-zinc-900/30 flex flex-col h-full border-l border-zinc-800">
         <Tabs value={activeTemplate} onValueChange={handleTemplateChange} className="flex-1 flex flex-col h-full">
           <div className="p-4 border-b border-zinc-800 bg-zinc-950">
             <TabsList className="w-full bg-zinc-900 border border-zinc-800">
               <TabsTrigger value="Standard" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Standard</TabsTrigger>
               <TabsTrigger value="Executive" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Executive</TabsTrigger>
-              <TabsTrigger value="ActionItems" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Actions</TabsTrigger>
+              <TabsTrigger value="Chat" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Chat AI</TabsTrigger>
             </TabsList>
           </div>
           
-          <ScrollArea className="flex-1 p-6">
-            {isGenerating ? (
+          <ScrollArea className="flex-1">
+            <div className="p-6">
+            {activeTemplate === 'Chat' ? (
+              <div className="flex flex-col h-[600px]">
+                <div className="flex-1 space-y-4 mb-4 overflow-y-auto pr-2">
+                  {chatMessages.length === 0 ? (
+                    <div className="text-center mt-10 text-zinc-500">
+                      <Bot className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                      <p>Ask Gemini any question about this meeting!</p>
+                    </div>
+                  ) : (
+                    chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                        <div className={`px-4 py-2 rounded-lg max-w-[85%] text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-300 border border-zinc-700'}`}>
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {isChatting && (
+                    <div className="flex items-start">
+                      <div className="px-4 py-2 rounded-lg bg-zinc-800 text-zinc-400 border border-zinc-700 text-sm flex items-center">
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Thinking...
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleChat()}
+                    placeholder="Ask about the meeting..."
+                    className="flex-1 bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-indigo-500"
+                  />
+                  <Button onClick={handleChat} disabled={!chatInput.trim() || isChatting}>Send</Button>
+                </div>
+              </div>
+            ) : isGenerating ? (
               <div className="space-y-4">
                 <div className="h-4 bg-zinc-800 rounded animate-pulse w-3/4"></div>
                 <div className="h-4 bg-zinc-800 rounded animate-pulse w-full"></div>
@@ -231,14 +291,16 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                   ) : (
                     <div className="text-center mt-10">
                       <p className="text-zinc-500 mb-4">No summary generated yet.</p>
-                      <Button onClick={() => handleTemplateChange(activeTemplate)}>Generate with Gemini</Button>
+                      {fullTranscript.length > 0 && (
+                        <Button onClick={() => handleTemplateChange(activeTemplate)}>Generate with Gemini</Button>
+                      )}
                     </div>
                   )}
                 </motion.div>
               </AnimatePresence>
             )}
 
-            {!isGenerating && meetingActionItems.length > 0 && (
+            {!isGenerating && activeTemplate !== 'Chat' && meetingActionItems.length > 0 && (
               <div className="mt-12 pt-6 border-t border-zinc-800">
                 <h3 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">Detected Actions</h3>
                 <div className="space-y-3">
@@ -256,6 +318,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                 </div>
               </div>
             )}
+            </div>
           </ScrollArea>
         </Tabs>
       </div>
