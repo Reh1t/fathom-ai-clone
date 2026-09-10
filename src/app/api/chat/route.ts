@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const meeting = await prisma.meeting.findUnique({
       where: { id: meetingId },
       include: {
-        TranscriptLine: {
+        transcripts: {
           orderBy: { startTime: 'asc' }
         }
       }
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
     }
 
-    const transcriptText = meeting.TranscriptLine.map(line => `[${line.speaker}]: ${line.text}`).join('\n')
+    const transcriptText = meeting.transcripts.map((line: { speaker: string; text: string }) => `[${line.speaker}]: ${line.text}`).join('\n')
 
     if (!transcriptText.trim()) {
       return NextResponse.json({ reply: 'Sorry, I cannot answer questions about this meeting because there is no transcript available yet.' })
