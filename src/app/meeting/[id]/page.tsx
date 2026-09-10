@@ -187,8 +187,8 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                     onClick={() => !isLive && usePlayerStore.getState().seekTo(line.startTime)}
                     className={`flex gap-4 group cursor-pointer p-2 -mx-2 rounded-md transition-colors ${isActive ? 'bg-zinc-800/60' : 'hover:bg-zinc-900/50'}`}
                   >
-                    <div className="w-12 text-xs text-zinc-500 pt-1 shrink-0">
-                      {Math.floor(line.startTime / 60)}:{(line.startTime % 60).toString().padStart(2, '0')}
+                    <div className="w-[85px] text-xs text-zinc-500 pt-1 shrink-0 font-medium">
+                      {Math.floor(line.startTime / 60).toString().padStart(2, '0')}:{(Math.floor(line.startTime % 60)).toString().padStart(2, '0')} - {Math.floor(line.endTime / 60).toString().padStart(2, '0')}:{(Math.floor(line.endTime % 60)).toString().padStart(2, '0')}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">

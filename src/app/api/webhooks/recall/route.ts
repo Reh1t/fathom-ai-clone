@@ -50,6 +50,10 @@ export async function POST(request: Request) {
           if (tRes.ok) {
             transcriptData = await tRes.json()
           }
+        }
+        
+        if (transcriptData && transcriptData.length > 0) {
+          await prisma.transcriptLine.deleteMany({ where: { meetingId: meeting.id } })
         } else {
            // Fallback to older transcript API
            const response = await fetch(`https://ap-northeast-1.recall.ai/api/v1/bot/${botId}/transcript`, {
@@ -64,31 +68,68 @@ export async function POST(request: Request) {
         for (const segment of transcriptData) {
           // The streaming transcript format has speaker name inside participant.name
           const speakerName = segment.participant?.name || segment.speaker || segment.name || 'Unknown'
-          const text = segment.words?.map((w: any) => w.text).join(' ') || segment.text || ''
+          const words = segment.words || []
           
-          if (!text.trim()) continue;
+          if (!words.length && !segment.text) {
+             continue; // empty
+          }
 
-          // The streaming transcript format has timestamps as objects with 'relative' and 'absolute' fields
-          const firstWord = segment.words?.[0]
-          const lastWord = segment.words?.[segment.words.length - 1]
-          
-          const getTimestamp = (wordTs: any, segmentTs: any) => {
+          const getTimestamp = (wordTs: any, defaultTs: any) => {
             if (wordTs?.relative !== undefined) return wordTs.relative
             if (typeof wordTs === 'number') return wordTs
-            if (segmentTs?.relative !== undefined) return segmentTs.relative
-            if (typeof segmentTs === 'number') return segmentTs
+            if (defaultTs?.relative !== undefined) return defaultTs.relative
+            if (typeof defaultTs === 'number') return defaultTs
             return 0
           }
 
-          await prisma.transcriptLine.create({
-            data: {
-              meetingId: meeting.id,
-              speaker: speakerName,
-              text,
-              startTime: getTimestamp(firstWord?.start_timestamp, segment.start_timestamp),
-              endTime: getTimestamp(lastWord?.end_timestamp, segment.end_timestamp)
+          // If there are words, chunk them into max 15 second intervals for readability
+          if (words.length > 0) {
+            let currentChunkWords: any[] = []
+            let chunkStartTime = getTimestamp(words[0].start_timestamp, 0)
+            
+            for (let i = 0; i < words.length; i++) {
+              const w = words[i]
+              currentChunkWords.push(w)
+              
+              const currentWordTime = getTimestamp(w.start_timestamp, 0)
+              const isLastWord = i === words.length - 1
+              const timeDiff = currentWordTime - chunkStartTime
+              const nextWordTime = isLastWord ? 0 : getTimestamp(words[i+1].start_timestamp, 0)
+              const isLongPause = !isLastWord && (nextWordTime - getTimestamp(w.end_timestamp, 0) > 2)
+
+              // Break chunk if > 15 seconds, or if there is a long pause > 2s, or end of array
+              if (timeDiff > 15 || isLongPause || isLastWord) {
+                const text = currentChunkWords.map(cw => cw.text).join(' ').trim()
+                if (text) {
+                  const chunkEndTime = getTimestamp(currentChunkWords[currentChunkWords.length - 1].end_timestamp, 0)
+                  await prisma.transcriptLine.create({
+                    data: {
+                      meetingId: meeting.id,
+                      speaker: speakerName,
+                      text,
+                      startTime: chunkStartTime,
+                      endTime: chunkEndTime
+                    }
+                  })
+                }
+                if (!isLastWord) {
+                  chunkStartTime = getTimestamp(words[i+1].start_timestamp, 0)
+                  currentChunkWords = []
+                }
+              }
             }
-          })
+          } else {
+             // Fallback if no word-level timestamps but text exists
+             await prisma.transcriptLine.create({
+               data: {
+                 meetingId: meeting.id,
+                 speaker: speakerName,
+                 text: segment.text,
+                 startTime: getTimestamp(segment.start_timestamp, 0),
+                 endTime: getTimestamp(segment.end_timestamp, 0)
+               }
+             })
+          }
         }
 
         // Immediately invoke our Gemini summarizer if we got a transcript
