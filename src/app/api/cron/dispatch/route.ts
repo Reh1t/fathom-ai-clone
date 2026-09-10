@@ -34,7 +34,20 @@ export async function GET(request: Request) {
         },
         body: JSON.stringify({
           meeting_url: meeting.meetUrl,
-          bot_name: 'Fathom AI Notetaker'
+          bot_name: 'Fathom AI Notetaker',
+          recording_config: {
+            transcript: {
+              provider: {
+                recallai_streaming: {
+                  mode: "prioritize_accuracy", 
+                  language_code: "auto"
+                }
+              },
+              diarization: {
+                use_separate_streams_when_available: true
+              }
+            }
+          }
         })
       })
 
