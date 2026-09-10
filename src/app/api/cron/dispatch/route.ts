@@ -25,8 +25,8 @@ export async function GET(request: Request) {
     const dispatched = []
 
     for (const meeting of upcomingMeetings) {
-      // Call Recall.ai API
-      const response = await fetch('https://api.recall.ai/api/v1/bot', {
+      // Call Recall.ai API (using us-west-2 region)
+      const response = await fetch('https://us-west-2.recall.ai/api/v1/bot', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${process.env.RECALL_API_KEY || ''}`,
