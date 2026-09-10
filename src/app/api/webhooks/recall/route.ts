@@ -5,9 +5,9 @@ export async function POST(request: Request) {
   try {
     const payload = await request.json()
     
-    // Recall.ai sends 'bot.status_change' with code 'done' when meeting finishes
-    if (payload.event === 'bot.status_change' && payload.data?.status?.code === 'done') {
-      const botId = payload.data?.bot_id
+    // Recall.ai sends 'bot.done' when the bot finishes processing the meeting
+    if (payload.event === 'bot.done') {
+      const botId = payload.data?.bot_id || payload.bot_id
       
       const meeting = await prisma.meeting.findUnique({ where: { recallId: botId } })
       if (!meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
