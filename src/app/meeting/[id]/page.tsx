@@ -146,7 +146,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Media Player Area */}
-        <div className="relative aspect-video bg-zinc-900 border-b border-zinc-800 flex items-center justify-center shrink-0">
+        <div className="relative h-[45vh] bg-zinc-900 border-b border-zinc-800 flex items-center justify-center shrink-0">
           {isLive ? (
             <div className="flex flex-col items-center text-zinc-500">
               <Bot className="w-12 h-12 mb-4 text-indigo-500 animate-pulse" />
@@ -157,7 +157,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
             <video 
               ref={videoRef}
               src={meeting.mediaUrl || "https://www.w3schools.com/html/mov_bbb.mp4"} 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               onTimeUpdate={handleTimeUpdate}
               controls
               onPlay={() => setIsPlaying(true)}
@@ -172,7 +172,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
             <h3 className="text-sm font-medium text-zinc-400">Transcript</h3>
             <Button variant="ghost" size="sm" className="h-7 text-xs"><Search className="w-3 h-3 mr-2"/>Search</Button>
           </div>
-          <ScrollArea className="flex-1 p-4">
+          <div className="flex-1 p-4 overflow-y-auto">
             <div className="space-y-6 pb-20">
               {fullTranscript.length === 0 && (
                 <p className="text-sm text-zinc-500 text-center italic mt-10">No transcript available.</p>
@@ -202,7 +202,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                 )
               })}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </div>
 
@@ -217,7 +217,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
             </TabsList>
           </div>
           
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             <div className="p-6">
             {activeTemplate === 'Chat' ? (
               <div className="flex flex-col h-[600px]">
@@ -321,7 +321,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
               </div>
             )}
             </div>
-          </ScrollArea>
+          </div>
         </Tabs>
       </div>
     </div>
