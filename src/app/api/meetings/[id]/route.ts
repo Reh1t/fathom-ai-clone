@@ -30,13 +30,14 @@ export async function GET(
     }
 
     // Access Control
-    if (!meeting.isPublic && meeting.userId !== session?.user?.id) {
+    const userId = (session?.user as any)?.id
+    if (!meeting.isPublic && meeting.userId !== userId) {
        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
     return NextResponse.json({
       meeting,
-      isOwner: meeting.userId === session?.user?.id,
+      isOwner: meeting.userId === userId,
       transcripts: meeting.transcripts,
       summaries: meeting.summaries,
       actionItems: meeting.actionItems

@@ -6,7 +6,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = (session?.user as any)?.id
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     
     const { lineId } = await request.json()
     if (!lineId) return NextResponse.json({ error: 'Missing lineId' }, { status: 400 })
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
       include: { meeting: true }
     })
     
-    if (!line || line.meeting.userId !== session.user.id) {
+    if (!line || line.meeting.userId !== userId) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
