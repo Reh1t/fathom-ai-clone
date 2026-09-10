@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Play, Pause, Scissors, Search, Loader2, Bot, ArrowLeft } from "lucide-react"
+import { Play, Pause, Scissors, Search, Loader2, Bot, ArrowLeft, Star } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 
@@ -20,6 +20,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
   const isLive = searchParams.get("live") === "true"
 
   const [meeting, setMeeting] = useState<any>(null)
+  const [isOwner, setIsOwner] = useState(false)
   const [fullTranscript, setFullTranscript] = useState<any[]>([])
   const [meetingActionItems, setMeetingActionItems] = useState<any[]>([])
   const [currentSummary, setCurrentSummary] = useState<any>(null)
@@ -38,6 +39,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
       if (res.ok) {
         const data = await res.json()
         setMeeting(data.meeting)
+        setIsOwner(data.isOwner)
         setFullTranscript(data.transcripts)
         setMeetingActionItems(data.actionItems)
         const summary = data.summaries.find((s: any) => s.template === activeTemplate)
@@ -145,12 +147,31 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
               <p className="text-sm text-zinc-400">{new Date(meeting.date).toLocaleDateString()} • {meeting.duration}</p>
             </div>
           </div>
-          {isLive && (
-            <Badge variant="outline" className="animate-pulse bg-red-500/10 text-red-500 border-red-500/20">
-              <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
-              Recall.ai Bot Active
-            </Badge>
-          )}
+          <div className="flex items-center gap-4">
+            {!isLive && isOwner && (
+              <Button 
+                variant={meeting.isPublic ? "default" : "outline"} 
+                className={meeting.isPublic ? "bg-indigo-600 hover:bg-indigo-700" : "border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"}
+                onClick={async () => {
+                  const res = await fetch(`/api/meetings/${meeting.id}/share`, { method: 'POST' })
+                  if (res.ok) {
+                    const data = await res.json()
+                    setMeeting({...meeting, isPublic: data.isPublic})
+                    navigator.clipboard.writeText(window.location.href)
+                    alert(data.isPublic ? "Public link copied to clipboard!" : "Meeting is now private.")
+                  }
+                }}
+              >
+                {meeting.isPublic ? "Shared (Copy Link)" : "Share"}
+              </Button>
+            )}
+            {isLive && (
+              <Badge variant="outline" className="animate-pulse bg-red-500/10 text-red-500 border-red-500/20">
+                <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+                Recall.ai Bot Active
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Media Player Area */}
@@ -198,11 +219,30 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                     <div className="w-[85px] text-xs text-zinc-500 pt-1 shrink-0 font-medium">
                       {Math.floor(line.startTime / 60).toString().padStart(2, '0')}:{(Math.floor(line.startTime % 60)).toString().padStart(2, '0')} - {Math.floor(line.endTime / 60).toString().padStart(2, '0')}:{(Math.floor(line.endTime % 60)).toString().padStart(2, '0')}
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-semibold text-indigo-400">{line.speaker}</span>
+                        {!isLive && isOwner && (
+                          <button 
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const res = await fetch('/api/transcribe/highlight', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ lineId: line.id })
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                setFullTranscript(prev => prev.map(l => l.id === line.id ? {...l, isHighlighted: data.isHighlighted} : l));
+                              }
+                            }}
+                            className={`transition-opacity ml-2 ${line.isHighlighted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                          >
+                            <Star className={`w-3.5 h-3.5 ${line.isHighlighted ? 'text-yellow-400 fill-yellow-400' : 'text-zinc-500 hover:text-yellow-400'}`} />
+                          </button>
+                        )}
                       </div>
-                      <p className={`text-sm leading-relaxed ${isActive ? 'text-zinc-100' : 'text-zinc-400'}`}>
+                      <p className={`text-sm leading-relaxed ${isActive ? 'text-zinc-100' : 'text-zinc-400'} ${line.isHighlighted ? 'bg-yellow-500/10 border-l-2 border-yellow-500/50 pl-2 -ml-[10px] py-0.5 rounded-r' : ''}`}>
                         {line.text}
                       </p>
                     </div>
@@ -219,15 +259,35 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
         <Tabs value={activeTemplate} onValueChange={handleTemplateChange} className="flex-1 flex flex-col h-full overflow-hidden">
           <div className="p-4 border-b border-zinc-800 bg-zinc-950 shrink-0">
             <TabsList className="w-full bg-zinc-900 border border-zinc-800">
-              <TabsTrigger value="Standard" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Summary</TabsTrigger>
-              <TabsTrigger value="Executive" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Action Items</TabsTrigger>
-              <TabsTrigger value="Chat" className="flex-1 data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Chat AI</TabsTrigger>
+              <TabsTrigger value="Standard" className="flex-1 text-xs sm:text-sm data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Summary</TabsTrigger>
+              <TabsTrigger value="Executive" className="flex-1 text-xs sm:text-sm data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Action Items</TabsTrigger>
+              <TabsTrigger value="Highlights" className="flex-1 text-xs sm:text-sm data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300 flex items-center gap-1.5"><Star className="w-3 h-3 hidden sm:inline" /> Highlights</TabsTrigger>
+              <TabsTrigger value="Chat" className="flex-1 text-xs sm:text-sm data-[state=active]:bg-indigo-500/20 data-[state=active]:text-indigo-300">Chat AI</TabsTrigger>
             </TabsList>
           </div>
           
           <div className="flex-1 overflow-y-auto">
             <div className="p-6">
-            {activeTemplate === 'Chat' ? (
+            {activeTemplate === 'Highlights' ? (
+              <div className="space-y-4">
+                {fullTranscript.filter(l => l.isHighlighted).length === 0 ? (
+                   <div className="text-center mt-10">
+                     <Star className="w-10 h-10 mx-auto mb-3 opacity-20 text-yellow-500" />
+                     <p className="text-zinc-500 text-sm">No highlights yet.</p>
+                     <p className="text-zinc-500 text-xs mt-1">Hover over transcript lines and click the star to save key moments here.</p>
+                   </div>
+                ) : (
+                   fullTranscript.filter(l => l.isHighlighted).map((line, idx) => (
+                      <div key={idx} className="p-4 bg-zinc-900/80 rounded-lg border-l-2 border-yellow-500 cursor-pointer hover:bg-zinc-800 transition-colors" onClick={() => !isLive && usePlayerStore.getState().seekTo(line.startTime)}>
+                        <p className="text-xs text-indigo-400 mb-2 font-semibold">
+                          {line.speaker} • {Math.floor(line.startTime / 60).toString().padStart(2, '0')}:{(Math.floor(line.startTime % 60)).toString().padStart(2, '0')}
+                        </p>
+                        <p className="text-sm text-zinc-300 leading-relaxed">{line.text}</p>
+                      </div>
+                   ))
+                )}
+              </div>
+            ) : activeTemplate === 'Chat' ? (
               <div className="flex flex-col h-[600px]">
                 <div className="flex-1 space-y-4 mb-4 overflow-y-auto pr-2">
                   {chatMessages.length === 0 ? (

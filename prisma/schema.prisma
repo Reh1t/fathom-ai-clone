@@ -19,6 +19,7 @@ model Meeting {
   mediaUrl  String?
   meetUrl   String?
   recallId  String?  @unique
+  isPublic  Boolean  @default(false)
   attendees Attendee[]
   
   transcripts TranscriptLine[]
@@ -92,6 +93,7 @@ model TranscriptLine {
   text      String
   startTime Float
   endTime   Float
+  isHighlighted Boolean @default(false)
   createdAt DateTime @default(now())
 }
 

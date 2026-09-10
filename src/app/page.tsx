@@ -9,6 +9,7 @@ import prisma from "@/lib/db"
 import Link from "next/link"
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { GlobalSearch } from "@/components/global-search"
 
 export const dynamic = 'force-dynamic'
 
@@ -97,6 +98,11 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight text-zinc-50">Meetings</h1>
           <p className="text-zinc-400 mt-1">Welcome back, {session.user.name}</p>
         </div>
+
+        <div className="flex-1 max-w-xl mx-8">
+          <GlobalSearch />
+        </div>
+        
         <div className="flex items-center gap-4">
           <form action={async () => {
             "use server"
