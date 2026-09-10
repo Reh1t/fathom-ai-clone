@@ -25,11 +25,11 @@ export async function GET(request: Request) {
     const dispatched = []
 
     for (const meeting of upcomingMeetings) {
-      // Call MeetingBaas API
-      const response = await fetch('https://api.meetingbaas.com/bots', {
+      // Call Recall.ai API
+      const response = await fetch('https://api.recall.ai/api/v1/bot', {
         method: 'POST',
         headers: {
-          'x-meeting-baas-api-key': process.env.MEETING_BAAS_API_KEY || '',
+          'Authorization': `Token ${process.env.RECALL_API_KEY || ''}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -42,9 +42,9 @@ export async function GET(request: Request) {
         const botData = await response.json()
         await prisma.meeting.update({
           where: { id: meeting.id },
-          data: { recallId: botData.bot_id } // reusing recallId column for bot_id
+          data: { recallId: botData.id } 
         })
-        dispatched.push(botData.bot_id)
+        dispatched.push(botData.id)
       } else {
         console.error('Failed to dispatch bot:', await response.text())
       }
