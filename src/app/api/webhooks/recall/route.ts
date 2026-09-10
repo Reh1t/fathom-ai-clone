@@ -12,10 +12,11 @@ export async function POST(request: Request) {
       const meeting = await prisma.meeting.findUnique({ where: { recallId: botId } })
       if (!meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
 
-      // Mark meeting as recorded immediately so it shows up in dashboard
+      // Mark meeting as recorded and save video URL
+      const videoUrl = payload.data?.video_url || null
       await prisma.meeting.update({
         where: { id: meeting.id },
-        data: { status: 'recorded' }
+        data: { status: 'recorded', mediaUrl: videoUrl }
       })
 
       // Fetch transcript from Recall.ai

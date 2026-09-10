@@ -85,7 +85,7 @@ export default async function DashboardPage() {
   
   const now = new Date()
   const upcomingMeetings = allMeetings
-    .filter(m => m.status === "upcoming" && new Date(m.date).getTime() > now.getTime() - 60 * 60 * 1000)
+    .filter(m => m.status === "upcoming")
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     
   const recordedMeetings = allMeetings.filter(m => m.status === "recorded")
@@ -125,24 +125,35 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4 mt-4">
-              {upcomingMeetings.map((meeting) => (
-                <div key={meeting.id} className="flex items-center p-3 rounded-lg bg-zinc-800/50 border border-zinc-800/50 hover:border-indigo-500/30 transition-colors">
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">{meeting.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(meeting.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {new Date(meeting.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • {meeting.duration}
-                    </p>
+              {upcomingMeetings.map((meeting) => {
+                const isPassed = new Date(meeting.date).getTime() < now.getTime() - 30 * 60 * 1000;
+                return (
+                  <div key={meeting.id} className={`flex items-center p-3 rounded-lg bg-zinc-800/50 border ${isPassed ? 'border-red-500/30' : 'border-zinc-800/50 hover:border-indigo-500/30'} transition-colors`}>
+                    <div className="flex-1 space-y-1">
+                      <p className={`text-sm font-medium leading-none ${isPassed ? 'text-zinc-400 line-through' : ''}`}>{meeting.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(meeting.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {new Date(meeting.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • {meeting.duration}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isPassed ? (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20">
+                          Missed
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+                          Starts Soon
+                        </Badge>
+                      )}
+                      {!isPassed && (
+                        <Link href={`/meeting/${meeting.id}?live=true`} className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 transition-colors">
+                          <Bot className="h-4 w-4 text-white" />
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-                      Starts Soon
-                    </Badge>
-                    <Link href={`/meeting/${meeting.id}?live=true`} className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 transition-colors">
-                      <Bot className="h-4 w-4 text-white" />
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
               {upcomingMeetings.length === 0 && (
                 <p className="text-sm text-muted-foreground py-4 text-center">No upcoming meetings today.</p>
               )}

@@ -38,7 +38,11 @@ export async function syncUserCalendar(userId: string) {
 
     const events = response.data.items || []
 
+    const fetchedEventIds = new Set<string>()
+
     for (const event of events) {
+      if (event.status === 'cancelled') continue
+
       // Find Google Meet or Zoom URL in the event description or location or hangoutLink
       let meetUrl = event.hangoutLink
       if (!meetUrl && event.description) {
@@ -51,6 +55,7 @@ export async function syncUserCalendar(userId: string) {
       }
 
       if (meetUrl && event.start?.dateTime) {
+        fetchedEventIds.add(event.id!)
         // Upsert into DB
         await prisma.meeting.upsert({
           where: { id: event.id! },
@@ -71,6 +76,19 @@ export async function syncUserCalendar(userId: string) {
         })
       }
     }
+
+    // Delete any upcoming meetings in DB that no longer exist in this Google Calendar timeframe
+    await prisma.meeting.deleteMany({
+      where: {
+        userId,
+        status: 'upcoming',
+        date: {
+          gte: thirtyDaysAgo,
+          lte: thirtyDaysFuture
+        },
+        id: { notIn: Array.from(fetchedEventIds) }
+      }
+    })
     
     return { success: true, count: events.length }
   } catch (error) {
