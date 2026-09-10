@@ -5,9 +5,8 @@ export async function POST(request: Request) {
   try {
     const payload = await request.json()
     
-    // Accept both 'bot.done' and 'bot.status_change' with 'done' just in case their JSON mapping differs from the UI
-    const isDone = payload.event === 'bot.done' || 
-                  (payload.event === 'bot.status_change' && payload.data?.status?.code === 'done')
+    // Only process bot.done to prevent concurrent race conditions with bot.status_change
+    const isDone = payload.event === 'bot.done'
                   
     if (isDone) {
       // The payload structure is payload.data.bot.id for 'bot.done'
