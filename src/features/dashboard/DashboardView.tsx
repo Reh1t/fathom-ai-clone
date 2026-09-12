@@ -148,7 +148,7 @@ export function DashboardView({ userName, userId, upcomingMeetings, recordedMeet
                           <div className="flex-1 min-w-0">
                             <p className={`text-sm font-bold truncate mb-1 ${isPassed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{meeting.title}</p>
                             <p className="text-xs text-slate-500 font-medium">
-                              {new Date(meeting.date).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})} • {meeting.duration}
+                              {new Date(meeting.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, {new Date(meeting.date).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})} • {meeting.duration}
                             </p>
                           </div>
                           <div>
