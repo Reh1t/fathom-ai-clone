@@ -34,6 +34,9 @@ export const authOptions: NextAuthOptions = {
       await provisionDemoWorkspace(message.user.id)
     }
   },
+  pages: {
+    signIn: '/login',
+  },
   debug: true
 }
 

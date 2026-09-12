@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/db'
+import { meetingService } from '@/services/meeting.service'
 
 export async function PUT(
   request: Request,
@@ -9,10 +9,7 @@ export async function PUT(
     const { id } = await params
     const { isCompleted } = await request.json()
 
-    await prisma.actionItem.update({
-      where: { id },
-      data: { isCompleted }
-    })
+    await meetingService.updateActionItem(id, isCompleted)
 
     return NextResponse.json({ success: true })
   } catch (error) {

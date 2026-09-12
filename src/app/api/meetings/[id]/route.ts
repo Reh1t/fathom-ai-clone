@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/db'
-
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { meetingService } from '@/services/meeting.service'
 
 export async function GET(
   request: Request,
@@ -12,36 +11,15 @@ export async function GET(
   
   try {
     const session = await getServerSession(authOptions)
+    const userId = session?.user?.id || 'anonymous'
 
-    const meeting = await prisma.meeting.findUnique({
-      where: { id },
-      include: {
-        attendees: true,
-        transcripts: {
-          orderBy: { startTime: 'asc' }
-        },
-        summaries: true,
-        actionItems: true
-      }
-    })
+    const data = await meetingService.getMeetingById(id, userId)
     
-    if (!meeting) {
-      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
-    }
-
-    // Access Control
-    const userId = session?.user?.id
-    if (!meeting.isPublic && meeting.userId !== userId) {
-       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!data) {
+      return NextResponse.json({ error: 'Meeting not found or unauthorized' }, { status: 404 })
     }
     
-    return NextResponse.json({
-      meeting,
-      isOwner: meeting.userId === userId,
-      transcripts: meeting.transcripts,
-      summaries: meeting.summaries,
-      actionItems: meeting.actionItems
-    })
+    return NextResponse.json(data)
   } catch (error) {
     console.error('Error fetching meeting:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

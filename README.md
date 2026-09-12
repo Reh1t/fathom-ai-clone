@@ -1,28 +1,35 @@
 # Fathom AI Clone
 
 ## What it is
-An AI meeting assistant inspired by Fathom, focused on turning recorded meetings into searchable transcripts, summaries, decisions, highlights, and action items.
+An enterprise-grade AI meeting assistant inspired by Fathom. It focuses on turning recorded meetings into searchable transcripts, summaries, decisions, highlights, and action items.
 
 ## How it works
-1. **Google Auth**: Secure authentication and identity.
+1. **Google Auth**: Secure authentication and identity provisioning.
 2. **Calendar**: Read-only integration to pull upcoming events.
-3. **Meeting Capture**: Autonomous recording layer.
-4. **Transcript**: Speaker diarization and transcription.
-5. **Gemini**: Generative AI processing of the raw transcript.
-6. **Structured Intelligence**: Extraction of action items, summaries, and key decisions using JSON schemas.
-7. **Searchable Workspace**: A responsive dashboard to review past meetings and search transcripts.
+3. **Meeting Capture**: Autonomous recording layer (simulated for assessment).
+4. **Transcript**: Speaker diarization and timestamped transcription.
+5. **Gemini**: Generative AI processing of the raw transcript via `@google/genai`.
+6. **Structured Intelligence**: Extraction of action items, executive summaries, and key decisions using JSON schemas.
+7. **Searchable Workspace**: A clean, light-themed responsive dashboard to review past meetings and search transcripts.
 
 ## Evaluation Note
 > **The meeting-capture layer is simulated for this submission, per the challenge allowance. The post-meeting intelligence workflow is implemented natively in the application.**
-> After signing in, the workspace is automatically provisioned with representative meeting data so the core product can be evaluated immediately without needing to set up external infrastructure. The Google Calendar integration is connected to the real Google API.
+> 
+> After signing in, the workspace is automatically provisioned with representative meeting data. Clicking **"Join"** on an upcoming meeting on the dashboard triggers a real-time simulation that injects a mocked transcript and routes you to the meeting intelligence view.
 
-## 🛠️ Tech Stack
-- **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
+## 🛠️ Architecture & Tech Stack
+The codebase follows a strict **Domain-Driven MVC Architecture**:
+- **Services (Model)**: `src/services/` (Prisma DB operations and Gemini logic)
+- **Controllers**: Thin `/api/` routes that delegate business logic to services.
+- **Views**: Server Components that fetch data and orchestrate pure Feature Slices (`src/features/`).
+
+**Tech Stack**:
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, Server Components)
 - **Database**: PostgreSQL / [Prisma ORM](https://www.prisma.io/)
 - **Authentication**: [NextAuth.js](https://next-auth.js.org/) (Google)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn UI](https://ui.shadcn.com/)
+- **Styling**: Light Theme via [Tailwind CSS](https://tailwindcss.com/)
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)
-- **AI Models**: Google Gemini 2.5 Flash via `@google/genai`
+- **AI Models**: Google Gemini 2.5 Flash
 
 ## 💻 Running Locally
 
