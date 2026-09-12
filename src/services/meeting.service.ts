@@ -19,6 +19,41 @@ export const meetingService = {
       return null;
     }
 
+    // Refresh expired Recall.ai S3 video URLs
+    if (meeting.mediaUrl && meeting.recallId) {
+      try {
+        const url = new URL(meeting.mediaUrl);
+        const expiresStr = url.searchParams.get('Expires');
+        if (expiresStr) {
+          const expiresTs = parseInt(expiresStr);
+          // 10-minute buffer before actual expiration
+          if (Date.now() / 1000 > expiresTs - 600) {
+            const botRes = await fetch(`https://ap-northeast-1.recall.ai/api/v1/bot/${meeting.recallId}`, {
+              headers: { 'Authorization': `Token ${process.env.RECALL_API_KEY || ''}` }
+            });
+            if (botRes.ok) {
+              const botData = await botRes.json();
+              let videoUrl = '';
+              if (botData.bot_recordings && botData.bot_recordings.length > 0) {
+                videoUrl = botData.bot_recordings[0]?.media_shortcuts?.video_mixed?.data?.download_url || '';
+              } else if (botData.recordings && botData.recordings.length > 0) {
+                videoUrl = botData.recordings[0]?.media_shortcuts?.video_mixed?.data?.download_url || '';
+              }
+              if (videoUrl) {
+                await prisma.meeting.update({
+                  where: { id: meeting.id },
+                  data: { mediaUrl: videoUrl }
+                });
+                meeting.mediaUrl = videoUrl;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to refresh expired media URL:', err);
+      }
+    }
+
     const isOwner = meeting.userId === userId;
 
     const transcripts = await prisma.transcriptLine.findMany({
