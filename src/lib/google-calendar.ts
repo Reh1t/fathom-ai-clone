@@ -82,6 +82,7 @@ export async function syncUserCalendar(userId: string) {
       where: {
         userId,
         status: 'upcoming',
+        isDemo: false,
         date: {
           gte: thirtyDaysAgo,
           lte: thirtyDaysFuture

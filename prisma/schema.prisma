@@ -20,6 +20,7 @@ model Meeting {
   meetUrl   String?
   recallId  String?  @unique
   isPublic  Boolean  @default(false)
+  isDemo    Boolean  @default(false)
   attendees Attendee[]
   
   transcripts TranscriptLine[]

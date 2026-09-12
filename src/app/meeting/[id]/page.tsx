@@ -32,7 +32,6 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
   const videoRef = useRef<HTMLVideoElement>(null)
   const activeLineRef = useRef<HTMLDivElement>(null)
 
-  // Fetch Data (could poll here if `isLive` is true to show transcript arriving from webhook)
   useEffect(() => {
     const fetchData = async () => {
       const res = await fetch(`/api/meetings/${id}`)
@@ -48,11 +47,20 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
     }
     fetchData()
     
-    let interval: any;
     if (isLive) {
-      interval = setInterval(fetchData, 5000) // Poll every 5s for webhook updates
+      const timer = setTimeout(async () => {
+        const res = await fetch('/api/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meetingId: id })
+        })
+        if (res.ok) {
+          // Remove the ?live=true parameter by replacing the URL
+          window.location.replace(`/meeting/${id}`)
+        }
+      }, 3500) // ~3 seconds product-like simulation delay
+      return () => clearTimeout(timer)
     }
-    return () => clearInterval(interval)
   }, [id, activeTemplate, isLive])
 
   const handleTemplateChange = async (val: string) => {
@@ -130,11 +138,23 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  if (!meeting) return <div className="p-8 text-center text-zinc-400">Loading meeting...</div>
+  const [toast, setToast] = useState<string | null>(null)
+  
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  if (!meeting) return <div className="p-8 text-center text-zinc-400 flex items-center justify-center h-screen bg-zinc-950"><Loader2 className="w-8 h-8 animate-spin text-indigo-500 mr-3" /> Loading meeting...</div>
 
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-50 overflow-hidden flex-col md:flex-row font-sans">
-      <div className="flex-1 flex flex-col border-r border-zinc-800 h-full overflow-hidden">
+      <div className="flex-1 flex flex-col border-r border-zinc-800 h-full overflow-hidden relative">
+        {toast && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-zinc-800 border border-zinc-700 text-zinc-100 px-4 py-2 rounded-lg shadow-lg text-sm flex items-center">
+            {toast}
+          </div>
+        )}
         <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50 shrink-0">
           <div className="flex items-center gap-4">
             <Link href="/">
@@ -158,7 +178,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                     const data = await res.json()
                     setMeeting({...meeting, isPublic: data.isPublic})
                     navigator.clipboard.writeText(window.location.href)
-                    alert(data.isPublic ? "Public link copied to clipboard!" : "Meeting is now private.")
+                    showToast(data.isPublic ? "Public link copied to clipboard!" : "Meeting is now private.")
                   }
                 }}
               >
@@ -166,9 +186,9 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
               </Button>
             )}
             {isLive && (
-              <Badge variant="outline" className="animate-pulse bg-red-500/10 text-red-500 border-red-500/20">
-                <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
-                Recall.ai Bot Active
+              <Badge variant="outline" className="animate-pulse bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+                <Loader2 className="w-3 h-3 mr-2 animate-spin inline" />
+                Simulating Capture
               </Badge>
             )}
           </div>
@@ -178,9 +198,9 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
         <div className="relative h-[45vh] bg-zinc-900 border-b border-zinc-800 flex items-center justify-center shrink-0">
           {isLive ? (
             <div className="flex flex-col items-center text-zinc-500">
-              <Bot className="w-12 h-12 mb-4 text-indigo-500 animate-pulse" />
-              <p>The Recall.ai bot is currently in your meeting listening.</p>
-              <p className="text-sm mt-2">The transcript will populate automatically via webhooks.</p>
+              <Loader2 className="w-12 h-12 mb-4 text-indigo-500 animate-spin" />
+              <p className="text-lg font-medium text-zinc-200">Preparing your meeting capture...</p>
+              <p className="text-sm mt-2 text-zinc-500">Demo capture &middot; recording simulation</p>
             </div>
           ) : (
             <video 
@@ -325,13 +345,22 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                 </div>
               </div>
             ) : isGenerating ? (
-              <div className="space-y-4">
-                <div className="h-4 bg-zinc-800 rounded animate-pulse w-3/4"></div>
-                <div className="h-4 bg-zinc-800 rounded animate-pulse w-full"></div>
-                <div className="h-4 bg-zinc-800 rounded animate-pulse w-5/6"></div>
-                <div className="h-4 bg-zinc-800 rounded animate-pulse w-full"></div>
-                <div className="h-4 bg-zinc-800 rounded animate-pulse w-1/2"></div>
-                <p className="text-xs text-indigo-400 mt-4 text-center">Gemini is generating...</p>
+              <div className="space-y-5 py-4">
+                <div className="flex items-center space-x-3 mb-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                  <p className="text-sm font-medium text-zinc-300">Gemini is analyzing the transcript...</p>
+                </div>
+                <div className="h-5 bg-zinc-800/80 rounded animate-pulse w-1/3 mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-full"></div>
+                  <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-[90%]"></div>
+                  <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-[95%]"></div>
+                </div>
+                <div className="h-5 bg-zinc-800/80 rounded animate-pulse w-1/4 mt-8 mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-full"></div>
+                  <div className="h-4 bg-zinc-800/50 rounded animate-pulse w-[85%]"></div>
+                </div>
               </div>
             ) : (
               <AnimatePresence mode="wait">
@@ -344,7 +373,7 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                 >
                   {isLive ? (
                     <div className="text-center mt-10">
-                      <p className="text-zinc-500 italic mb-4">Summary will generate once Recall.ai bot leaves and webhook fires.</p>
+                      <p className="text-zinc-500 italic mb-4">Summary will generate automatically after simulation completes.</p>
                     </div>
                   ) : currentSummary ? (
                     <div className="space-y-4 whitespace-pre-wrap text-zinc-300 leading-relaxed">
@@ -375,10 +404,27 @@ export default function MeetingPage({ params }: { params: Promise<{ id: string }
                 <h3 className="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wider">Detected Actions</h3>
                 <div className="space-y-3">
                   {meetingActionItems.map((item: any) => (
-                    <div key={item.id} className="flex items-start space-x-3 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                      <Checkbox id={item.id} defaultChecked={item.isCompleted} className="mt-1" />
+                    <div key={item.id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${item.isCompleted ? 'bg-zinc-900/30 border-zinc-800/50' : 'bg-zinc-900/50 border-zinc-800'}`}>
+                      <Checkbox 
+                        id={item.id} 
+                        checked={item.isCompleted} 
+                        onCheckedChange={async (checked) => {
+                          const isCompleted = checked === true;
+                          setMeetingActionItems(prev => prev.map(a => a.id === item.id ? { ...a, isCompleted } : a))
+                          try {
+                            await fetch(`/api/action-items/${item.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ isCompleted })
+                            })
+                          } catch (e) {
+                            console.error(e)
+                          }
+                        }}
+                        className="mt-1" 
+                      />
                       <div className="grid gap-1.5 leading-none flex-1">
-                        <label htmlFor={item.id} className="text-sm font-medium leading-tight peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        <label htmlFor={item.id} className={`text-sm font-medium leading-tight cursor-pointer ${item.isCompleted ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
                           {item.task}
                         </label>
                         <p className="text-xs text-indigo-400 font-medium">{item.assignee}</p>

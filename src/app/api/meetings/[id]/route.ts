@@ -30,7 +30,7 @@ export async function GET(
     }
 
     // Access Control
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
     if (!meeting.isPublic && meeting.userId !== userId) {
        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

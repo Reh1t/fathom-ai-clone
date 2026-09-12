@@ -23,9 +23,15 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async session({ session, user }) {
       if (session.user) {
-        (session.user as any).id = user.id
+        session.user.id = user.id
       }
       return session
+    }
+  },
+  events: {
+    createUser: async (message) => {
+      const { provisionDemoWorkspace } = await import('@/lib/provision')
+      await provisionDemoWorkspace(message.user.id)
     }
   },
   debug: true

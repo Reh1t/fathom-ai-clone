@@ -79,7 +79,7 @@ export default async function DashboardPage() {
   }
 
   const allMeetings = await prisma.meeting.findMany({
-    where: { userId: (session.user as any).id },
+    where: { userId: session.user.id },
     include: { attendees: true },
     orderBy: { date: 'desc' }
   })
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
             "use server"
             const { syncUserCalendar } = await import('@/lib/google-calendar')
             const { revalidatePath } = await import('next/cache')
-            await syncUserCalendar((session.user as any).id)
+            await syncUserCalendar(session.user.id)
             revalidatePath('/')
           }}>
             <Button type="submit" variant="outline" className="border-zinc-800 hover:bg-zinc-800 text-zinc-300">
@@ -174,34 +174,42 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recordedMeetings.map((meeting) => (
-                <Link key={meeting.id} href={`/meeting/${meeting.id}`} className="block">
-                  <div className="flex items-center p-4 rounded-xl bg-zinc-800/30 border border-zinc-800 hover:bg-zinc-800/60 transition-all cursor-pointer group">
-                    <div className="w-12 h-12 rounded-lg bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-indigo-500/50 transition-colors">
-                      <Video className="h-5 w-5 text-indigo-400" />
-                    </div>
-                    <div className="ml-4 flex-1 space-y-1">
-                      <p className="text-sm font-semibold leading-none">{meeting.title}</p>
-                      <div className="flex items-center text-xs text-muted-foreground mt-1 gap-3">
-                        <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {meeting.duration}</span>
-                        <span>{new Date(meeting.date).toLocaleDateString()}</span>
+              {recordedMeetings.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-zinc-800 rounded-xl bg-zinc-900/30">
+                  <Video className="w-12 h-12 text-zinc-700 mb-4" />
+                  <h4 className="text-sm font-medium text-zinc-300">No recordings yet</h4>
+                  <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Join an upcoming meeting to capture your first recording.</p>
+                </div>
+              ) : (
+                recordedMeetings.map((meeting) => (
+                  <Link key={meeting.id} href={`/meeting/${meeting.id}`} className="block">
+                    <div className="flex items-center p-4 rounded-xl bg-zinc-800/30 border border-zinc-800 hover:bg-zinc-800/60 transition-all cursor-pointer group">
+                      <div className="w-12 h-12 rounded-lg bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-indigo-500/50 transition-colors">
+                        <Video className="h-5 w-5 text-indigo-400" />
+                      </div>
+                      <div className="ml-4 flex-1 space-y-1">
+                        <p className="text-sm font-semibold leading-none">{meeting.title}</p>
+                        <div className="flex items-center text-xs text-muted-foreground mt-1 gap-3">
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {meeting.duration}</span>
+                          <span>{new Date(meeting.date).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex -space-x-2 mr-2">
+                        {meeting.attendees.slice(0,3).map((a, i) => (
+                          <Avatar key={i} className="w-7 h-7 border-2 border-zinc-900">
+                            <AvatarFallback className="text-[10px] bg-zinc-700">{a.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {meeting.attendees.length > 3 && (
+                          <div className="w-7 h-7 rounded-full bg-zinc-800 border-2 border-zinc-900 flex items-center justify-center text-[10px] text-zinc-400 font-medium z-10">
+                            +{meeting.attendees.length - 3}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex -space-x-2 mr-2">
-                      {meeting.attendees.slice(0,3).map((a, i) => (
-                        <Avatar key={i} className="w-7 h-7 border-2 border-zinc-900">
-                          <AvatarFallback className="text-[10px] bg-zinc-700">{a.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                      ))}
-                      {meeting.attendees.length > 3 && (
-                        <div className="w-7 h-7 rounded-full bg-zinc-800 border-2 border-zinc-900 flex items-center justify-center text-[10px] text-zinc-400 font-medium z-10">
-                          +{meeting.attendees.length - 3}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
