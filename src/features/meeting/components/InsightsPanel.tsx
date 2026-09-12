@@ -82,7 +82,7 @@ export function InsightsPanel({
   }
 
   return (
-    <div className="w-full md:w-[480px] bg-slate-50 flex flex-col h-full shrink-0">
+    <div className="w-full lg:w-[40%] xl:w-[35%] 2xl:w-[30%] min-w-[400px] bg-slate-50 flex flex-col h-full shrink-0">
       <Tabs value={activeTemplate} onValueChange={onTemplateChange} className="flex-1 flex flex-col h-full overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0">
           <TabsList className="w-full bg-slate-100 border border-slate-200 p-1 h-11">

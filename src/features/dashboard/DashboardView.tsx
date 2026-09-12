@@ -30,16 +30,16 @@ export function DashboardView({ userName, userId, upcomingMeetings, recordedMeet
       {/* Top Navigation */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-4 max-w-[1600px] mx-auto">
-          <div className="flex items-center gap-3 w-[250px]">
+          <div className="flex items-center gap-3 w-auto md:w-1/4 lg:w-[250px] shrink-0">
             <Bot className="w-7 h-7 text-sky-600" />
-            <span className="font-bold text-lg tracking-tight">Fathom Dashboard</span>
+            <span className="font-bold text-lg tracking-tight hidden sm:inline">Fathom Dashboard</span>
           </div>
           
-          <div className="flex-1 max-w-2xl px-8">
+          <div className="flex-1 max-w-2xl px-4 md:px-8">
             <GlobalSearch />
           </div>
 
-          <div className="flex items-center gap-4 w-[250px] justify-end">
+          <div className="flex items-center gap-2 md:gap-4 w-auto md:w-1/4 lg:w-[250px] shrink-0 justify-end">
             <form action={async () => {
               "use server"
               const { syncUserCalendar } = await import('@/lib/google-calendar')
@@ -47,14 +47,14 @@ export function DashboardView({ userName, userId, upcomingMeetings, recordedMeet
               await syncUserCalendar(userId)
               revalidatePath('/')
             }}>
-              <Button type="submit" variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-700 bg-white shadow-sm font-medium h-9">
-                <RefreshCcw className="w-4 h-4 mr-2" /> Sync Calendar
+              <Button type="submit" variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-700 bg-white shadow-sm font-medium h-9 px-2 md:px-4">
+                <RefreshCcw className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Sync Calendar</span>
               </Button>
             </form>
-            <div className="h-8 w-px bg-slate-200 mx-1"></div>
+            <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block"></div>
             <a href="/api/auth/signout">
-              <Button variant="ghost" className="text-slate-500 hover:text-slate-900 font-medium h-9 px-3">
-                <LogOut className="w-4 h-4 mr-2" /> Sign Out
+              <Button variant="ghost" className="text-slate-500 hover:text-slate-900 font-medium h-9 px-2 md:px-3">
+                <LogOut className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Sign Out</span>
               </Button>
             </a>
           </div>
