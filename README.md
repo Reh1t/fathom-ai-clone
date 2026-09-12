@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fathom AI Clone
 
-## Getting Started
+A fully functional, autonomous AI meeting notetaker MVP built to replicate the core value proposition of Fathom.video.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **🤖 Autonomous Meeting Capture**: Integrates with Recall.ai/MeetingBaas webhooks to deploy actual recording bots directly into Google Meet calls. No "faking" the capture layer—real bots, real video, real streaming transcripts.
+- **🧠 Generative AI Intelligence**: Powered by Google Gemini 2.5 Flash. Instantly generates Executive Summaries and extracts Action Items the moment the meeting ends.
+- **💬 Contextual AI Chat**: A built-in chat interface with temporary memory. Ask Gemini questions about the meeting, and it will answer based *strictly* on the injected transcript context to prevent hallucinations.
+- **✨ Highlights & Bookmarks**: A streamlined approach to video clipping. Star important sentences in the transcript to save them to a dedicated Highlights tab for instant timestamp jumping.
+- **🔗 Public Sharing**: One-click sharing generates a public URL, allowing non-authenticated guests to view the video, transcript, and AI summaries seamlessly.
+- **🔍 Global Search**: A lightning-fast dashboard search that scans the database across all historical meeting transcripts.
+- **📅 Google Calendar Sync**: Built-in integration to pull upcoming meetings directly from your schedule.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Framework**: [Next.js 14](https://nextjs.org/) (App Router, Server Actions)
+- **Database**: PostgreSQL (hosted on [Supabase](https://supabase.com/)), managed via [Prisma ORM](https://www.prisma.io/)
+- **Authentication**: [NextAuth.js](https://next-auth.js.org/) (Google OAuth)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn UI](https://ui.shadcn.com/)
+- **State Management**: [Zustand](https://github.com/pmndrs/zustand) (for media player sync)
+- **AI Models**: Google Gemini 2.5 Flash via `@google/genai`
+- **Bot Infrastructure**: Recall.ai / MeetingBaas Webhooks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📐 Product & Engineering Decisions
 
-## Learn More
+During development, several strategic decisions were made to prioritize UX and delivery speed without compromising core functionality:
+1. **Highlighting vs. Physical Clipping**: Instead of building a heavy backend media server (like FFmpeg) to trim and encode physical `.mp4` files, the "Share a clip" feature was reimagined. Users can "Star" transcript lines and share the full public meeting URL. This delivers the exact same core value (sharing information with absent team members) with significantly better reliability and faster load times.
+2. **Real Capture vs. Stubbing**: While the project brief allowed stubbing the recording layer, we chose to integrate actual recording bots. Autonomous capture is the magic of the product, and proving it works end-to-end was a priority.
 
-To learn more about Next.js, take a look at the following resources:
+## 💻 Running Locally
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Reh1t/fathom-ai-clone.git
+   cd fathom-ai-clone
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## Deploy on Vercel
+3. **Environment Variables**
+   Create a `.env` file in the root directory with the following variables:
+   ```env
+   # Database (Supabase)
+   DATABASE_URL="postgresql://..."
+   DIRECT_URL="postgresql://..."
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   # NextAuth
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="..."
+   GOOGLE_CLIENT_ID="..."
+   GOOGLE_CLIENT_SECRET="..."
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   # AI & Bots
+   GEMINI_API_KEY="..."
+   RECALL_API_KEY="..."
+   ```
+
+4. **Database Setup**
+   ```bash
+   npx prisma db push
+   npx prisma generate
+   ```
+
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+## 📝 Assessment Notes
+- The `.agent-logs/` directory has been tracked and committed throughout the development process.
+- The UI is designed with a dark-mode first, highly responsive layout prioritizing transcript readability.
