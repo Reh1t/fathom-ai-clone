@@ -16,61 +16,64 @@ export async function provisionDemoWorkspace(userId: string) {
 
     console.log(`Provisioning demo workspace for user ${userId}...`)
 
-    const meetingIdMap = new Map<string, string>()
+    await prisma.$transaction(async (tx) => {
+      // Create meetings and map old ids to new ids
+      const meetingIdMap = new Map<string, string>()
 
-    for (const m of meetings) {
-      const newMeeting = await prisma.meeting.create({
-        data: {
-          userId,
-          title: m.title,
-          date: new Date(m.date),
-          duration: m.duration,
-          status: m.status,
-          mediaUrl: m.mediaUrl,
-          isDemo: true,
-          attendees: {
-            create: m.attendees.map(a => ({
-              name: a.name,
-              avatar: a.avatar
-            }))
+      for (const m of meetings) {
+        const newMeeting = await tx.meeting.create({
+          data: {
+            userId,
+            title: m.title,
+            date: new Date(m.date),
+            duration: m.duration,
+            status: m.status,
+            mediaUrl: m.mediaUrl,
+            isDemo: true,
+            attendees: {
+              create: m.attendees.map(a => ({
+                name: a.name,
+                avatar: a.avatar
+              }))
+            }
           }
-        }
-      })
-      meetingIdMap.set(m.id, newMeeting.id)
-    }
+        })
+        meetingIdMap.set(m.id, newMeeting.id)
+      }
 
-    // Transcripts
-    const transcriptData = transcripts
-      .map(t => ({
-        meetingId: meetingIdMap.get(t.meetingId)!,
-        speaker: t.speaker,
-        text: t.text,
-        startTime: t.startTime,
-        endTime: t.endTime
-      }))
-      .filter(t => t.meetingId)
-    await prisma.transcriptLine.createMany({ data: transcriptData })
+      // Transcripts
+      const transcriptData = transcripts
+        .map(t => ({
+          meetingId: meetingIdMap.get(t.meetingId)!,
+          speaker: t.speaker,
+          text: t.text,
+          startTime: t.startTime,
+          endTime: t.endTime
+        }))
+        .filter(t => t.meetingId)
+      await tx.transcriptLine.createMany({ data: transcriptData })
 
-    // Summaries
-    const summaryData = summaries
-      .map(s => ({
-        meetingId: meetingIdMap.get(s.meetingId)!,
-        template: s.template,
-        contentMarkdown: s.contentMarkdown
-      }))
-      .filter(s => s.meetingId)
-    await prisma.summary.createMany({ data: summaryData })
+      // Summaries
+      const summaryData = summaries
+        .map(s => ({
+          meetingId: meetingIdMap.get(s.meetingId)!,
+          template: s.template,
+          contentMarkdown: s.contentMarkdown
+        }))
+        .filter(s => s.meetingId)
+      await tx.summary.createMany({ data: summaryData })
 
-    // Action Items
-    const actionItemData = actionItems
-      .map(a => ({
-        meetingId: meetingIdMap.get(a.meetingId)!,
-        task: a.task,
-        assignee: a.assignee,
-        isCompleted: a.isCompleted
-      }))
-      .filter(a => a.meetingId)
-    await prisma.actionItem.createMany({ data: actionItemData })
+      // Action Items
+      const actionItemData = actionItems
+        .map(a => ({
+          meetingId: meetingIdMap.get(a.meetingId)!,
+          task: a.task,
+          assignee: a.assignee,
+          isCompleted: a.isCompleted
+        }))
+        .filter(a => a.meetingId)
+      await tx.actionItem.createMany({ data: actionItemData })
+    })
 
     console.log(`Demo workspace provisioned for user ${userId}.`)
   } catch (error) {

@@ -89,7 +89,16 @@ export const meetingService = {
     })
   },
 
-  async updateActionItem(itemId: string, isCompleted: boolean) {
+  async updateActionItem(itemId: string, isCompleted: boolean, userId: string) {
+    const actionItem = await prisma.actionItem.findUnique({
+      where: { id: itemId },
+      include: { meeting: true }
+    });
+
+    if (!actionItem || actionItem.meeting.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+
     return prisma.actionItem.update({
       where: { id: itemId },
       data: { isCompleted }

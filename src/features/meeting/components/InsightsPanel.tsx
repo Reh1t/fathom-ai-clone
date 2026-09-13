@@ -127,7 +127,23 @@ export function InsightsPanel({
                       <Bot className="w-8 h-8 text-sky-600" />
                     </div>
                     <p className="text-slate-900 font-bold mb-2">Ask Gemini</p>
-                    <p className="text-slate-500 text-sm">Ask any question about the meeting context.</p>
+                    <p className="text-slate-500 text-sm mb-6">Ask any question about the meeting context.</p>
+                    
+                    <div className="flex flex-col gap-2 max-w-sm mx-auto px-4">
+                      {[
+                        "What were the biggest decisions?",
+                        "Who owns the next steps?",
+                        "What concerns were raised?"
+                      ].map((prompt, i) => (
+                        <button
+                          key={i}
+                          onClick={() => { setChatInput(prompt); }}
+                          className="text-sm text-left px-4 py-2.5 bg-white border border-slate-200 hover:border-sky-300 hover:bg-sky-50 rounded-lg text-slate-600 transition-colors"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   chatMessages.map((msg, idx) => (

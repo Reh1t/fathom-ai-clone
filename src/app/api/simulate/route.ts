@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import prisma from '@/lib/db'
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+    const userId = (session?.user as any)?.id
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { meetingId } = await request.json()
 
     if (!meetingId) {
@@ -12,6 +21,10 @@ export async function POST(request: Request) {
     const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } })
     if (!meeting) {
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+    }
+
+    if (meeting.userId !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     // To provide a flawless deterministic simulation even for real synced calendar events,

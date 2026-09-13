@@ -1,7 +1,7 @@
 # Fathom AI Clone
 
 ## What it is
-An enterprise-grade AI meeting assistant inspired by Fathom. It focuses on turning recorded meetings into searchable transcripts, summaries, decisions, highlights, and action items.
+A production-oriented prototype of an AI meeting assistant inspired by Fathom. It focuses on turning recorded meetings into searchable transcripts, summaries, decisions, highlights, and action items.
 
 ## How it works
 1. **Google Auth**: Secure authentication and identity provisioning.
@@ -18,7 +18,7 @@ An enterprise-grade AI meeting assistant inspired by Fathom. It focuses on turni
 > After signing in, the workspace is automatically provisioned with representative meeting data. Clicking **"Join"** on an upcoming meeting on the dashboard triggers a real-time simulation that injects a mocked transcript and routes you to the meeting intelligence view.
 
 ## 🛠️ Architecture & Tech Stack
-The codebase follows a strict **Domain-Driven MVC Architecture**:
+The codebase follows a **service-layer architecture with feature-oriented UI organization**:
 - **Services (Model)**: `src/services/` (Prisma DB operations and Gemini logic)
 - **Controllers**: Thin `/api/` routes that delegate business logic to services.
 - **Views**: Server Components that fetch data and orchestrate pure Feature Slices (`src/features/`).
