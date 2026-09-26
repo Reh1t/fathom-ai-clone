@@ -122,7 +122,7 @@ export function InsightsPanel({
   }
 
   return (
-    <div className="w-full lg:w-[40%] xl:w-[35%] 2xl:w-[30%] min-w-[400px] bg-slate-50 flex flex-col h-full shrink-0">
+    <div className="w-full bg-slate-50 flex flex-col h-full shrink-0">
       <Tabs value={activeTemplate} onValueChange={onTemplateChange} className="flex-1 flex flex-col h-full overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0">
           <TabsList className="w-full bg-slate-100 border border-slate-200 p-1 h-11">
@@ -177,11 +177,22 @@ export function InsightsPanel({
                     <p className="text-slate-500 text-sm mb-6">Ask any question about the meeting context.</p>
                     
                     <div className="flex flex-col gap-2 max-w-sm mx-auto px-4">
-                      {[
-                        "What were the main disagreements?",
-                        "Summarize Sarah's key points",
-                        "What are the next steps and blockers?"
-                      ].map((prompt, i) => (
+                      {(() => {
+                        let topSpeaker = "the team";
+                        if (transcripts && transcripts.length > 0) {
+                          const counts: Record<string, number> = {};
+                          transcripts.forEach(t => counts[t.speaker] = (counts[t.speaker] || 0) + 1);
+                          const mostFrequent = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+                          if (mostFrequent) {
+                            topSpeaker = mostFrequent.split(' ')[0];
+                          }
+                        }
+                        return [
+                          "What were the main disagreements?",
+                          `Summarize ${topSpeaker}'s key points`,
+                          "What are the next steps and blockers?"
+                        ];
+                      })().map((prompt, i) => (
                         <button
                           key={i}
                           onClick={() => { handleChat(prompt); }}

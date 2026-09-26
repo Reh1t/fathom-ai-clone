@@ -257,7 +257,7 @@ export function MeetingClient({ initialData, isLive }: MeetingClientProps) {
       </div>
 
       {/* Right Column */}
-      <div className="h-full z-0 relative">
+      <div className="h-full z-0 relative w-full lg:w-[40%] xl:w-[35%] 2xl:w-[30%] min-w-[400px] shrink-0">
         <InsightsPanel 
           meetingId={meeting.id}
           isLive={isSimulationActive}
