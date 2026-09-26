@@ -19,6 +19,10 @@ export default async function MeetingPage(props: { params: Promise<{ id: string 
   const initialData = await meetingService.getMeetingById(id, userId || 'anonymous')
 
   if (!initialData) {
+    if (!userId || userId === 'anonymous') {
+      const { redirect } = await import('next/navigation');
+      return redirect(`/login?callbackUrl=${encodeURIComponent(`/meeting/${id}`)}`);
+    }
     notFound()
   }
 

@@ -12,9 +12,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const resolvedParams = await params
     const { id } = resolvedParams
     
-    const updated = await meetingService.toggleMeetingPrivacy(id, userId)
+    let isPublic = false
+    try {
+      const body = await request.json()
+      if (body.forcePublic) {
+        // Need prisma to force update, but let's just do it directly here
+        const { default: prisma } = await import('@/lib/db')
+        const meeting = await prisma.meeting.update({
+          where: { id, userId },
+          data: { isPublic: true }
+        })
+        isPublic = meeting.isPublic
+      } else {
+        const updated = await meetingService.toggleMeetingPrivacy(id, userId)
+        isPublic = updated.isPublic
+      }
+    } catch (e) {
+      // If no body or error parsing, fallback to standard toggle
+      const updated = await meetingService.toggleMeetingPrivacy(id, userId)
+      isPublic = updated.isPublic
+    }
 
-    return NextResponse.json({ success: true, isPublic: updated.isPublic })
+    return NextResponse.json({ success: true, isPublic })
   } catch (error: any) {
     console.error('Share toggle error:', error)
     if (error.message === 'Unauthorized') {

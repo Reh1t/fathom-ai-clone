@@ -3,9 +3,12 @@ import React, { useState } from "react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { Star, Bot, Loader2 } from "lucide-react"
+import { Star, Bot, Loader2, Copy, Share } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { usePlayerStore } from "@/store/player-store"
+import { toast } from "sonner"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface ActionItem {
   id: string
@@ -24,6 +27,7 @@ interface InsightsPanelProps {
   isGenerating: boolean
   onTemplateChange: (val: string) => void
   onActionItemToggle: (itemId: string, isCompleted: boolean) => void
+  onShareClip?: (line: any) => void
 }
 
 export function InsightsPanel({
@@ -35,19 +39,20 @@ export function InsightsPanel({
   activeTemplate,
   isGenerating,
   onTemplateChange,
-  onActionItemToggle
+  onActionItemToggle,
+  onShareClip
 }: InsightsPanelProps) {
   
   const [chatInput, setChatInput] = useState("")
   const [chatMessages, setChatMessages] = useState<{role: 'user'|'ai', text: string}[]>([])
   const [isChatting, setIsChatting] = useState(false)
 
-  const handleChat = async () => {
-    if (!chatInput.trim()) return
-    const msg = chatInput
+  const handleChat = async (promptMsg?: string) => {
+    const msg = promptMsg || chatInput
+    if (!msg.trim()) return
     const currentHistory = [...chatMessages]
     
-    setChatInput("")
+    if (!promptMsg) setChatInput("")
     setChatMessages(prev => [...prev, { role: 'user', text: msg }])
     setIsChatting(true)
 
@@ -57,12 +62,37 @@ export function InsightsPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ meetingId, question: msg, history: currentHistory })
       })
-      if (res.ok) {
-        const data = await res.json()
-        setChatMessages(prev => [...prev, { role: 'ai', text: data.reply }])
+      if (!res.ok) throw new Error("Chat failed")
+      
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error("No reader")
+      
+      const decoder = new TextDecoder()
+      let fullReply = ""
+      
+      setChatMessages(prev => [...prev, { role: 'ai', text: "" }])
+      
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        fullReply += decoder.decode(value, { stream: true })
+        setChatMessages(prev => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'ai', text: fullReply }
+          return updated
+        })
       }
     } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'ai', text: 'Sorry, I encountered an error answering that.' }])
+      toast.error("Failed to fetch response.")
+      setChatMessages(prev => {
+        const updated = [...prev]
+        if (updated[updated.length - 1]?.role === 'ai') {
+           updated[updated.length - 1] = { role: 'ai', text: 'Sorry, I encountered an error answering that.' }
+        } else {
+           updated.push({ role: 'ai', text: 'Sorry, I encountered an error answering that.' })
+        }
+        return updated
+      })
     } finally {
       setIsChatting(false)
     }
@@ -71,13 +101,23 @@ export function InsightsPanel({
   const handleActionToggle = async (itemId: string, checked: boolean) => {
     onActionItemToggle(itemId, checked)
     try {
-      await fetch(`/api/action-items/${itemId}`, {
+      const res = await fetch(`/api/action-items/${itemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isCompleted: checked })
       })
+      if (!res.ok) throw new Error("Update failed")
     } catch (e) {
       console.error(e)
+      toast.error("Failed to update action item.")
+      onActionItemToggle(itemId, !checked)
+    }
+  }
+
+  const handleCopyNotes = () => {
+    if (currentSummary) {
+      navigator.clipboard.writeText(currentSummary.contentMarkdown)
+      toast.success("Notes copied to clipboard!")
     }
   }
 
@@ -107,12 +147,19 @@ export function InsightsPanel({
                  </div>
               ) : (
                  transcripts.filter(l => l.isHighlighted).map((line, idx) => (
-                    <div key={idx} className="p-5 bg-white rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-amber-300 hover:shadow-md transition-all" onClick={() => !isLive && usePlayerStore.getState().seekTo(line.startTime)}>
-                      <p className="text-xs text-slate-500 mb-2 font-bold flex items-center gap-2">
+                    <div key={idx} className="p-5 bg-white rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-amber-300 hover:shadow-md transition-all group" onClick={() => !isLive && usePlayerStore.getState().seekTo(line.startTime)}>
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
                         <span className="text-slate-900">{line.speaker}</span>
-                        <span>•</span>
+                        <span> </span>
                         <span>{Math.floor(line.startTime / 60).toString().padStart(2, '0')}:{(Math.floor(line.startTime % 60)).toString().padStart(2, '0')}</span>
                       </p>
+                      {!isLive && onShareClip && (
+                        <button onClick={(e) => { e.stopPropagation(); onShareClip(line); }} className="text-slate-300 hover:text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Share Clip">
+                          <Share className="w-4 h-4" />
+                        </button>
+                      )}
+                      </div>
                       <p className="text-[15px] text-slate-800 leading-relaxed font-medium">{line.text}</p>
                     </div>
                  ))
@@ -131,13 +178,13 @@ export function InsightsPanel({
                     
                     <div className="flex flex-col gap-2 max-w-sm mx-auto px-4">
                       {[
-                        "What were the biggest decisions?",
-                        "Who owns the next steps?",
-                        "What concerns were raised?"
+                        "What were the main disagreements?",
+                        "Summarize Sarah's key points",
+                        "What are the next steps and blockers?"
                       ].map((prompt, i) => (
                         <button
                           key={i}
-                          onClick={() => { setChatInput(prompt); }}
+                          onClick={() => { handleChat(prompt); }}
                           className="text-sm text-left px-4 py-2.5 bg-white border border-slate-200 hover:border-sky-300 hover:bg-sky-50 rounded-lg text-slate-600 transition-colors"
                         >
                           {prompt}
@@ -171,7 +218,7 @@ export function InsightsPanel({
                   placeholder="Ask about the meeting..."
                   className="flex-1 bg-transparent px-3 py-2 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none"
                 />
-                <Button onClick={handleChat} disabled={!chatInput.trim() || isChatting} className="bg-sky-600 hover:bg-sky-700 text-white font-medium px-6">Send</Button>
+                <Button onClick={() => handleChat()} disabled={!chatInput.trim() || isChatting} className="bg-sky-600 hover:bg-sky-700 text-white font-medium px-6">Send</Button>
               </div>
             </div>
           ) : isGenerating ? (
@@ -210,16 +257,28 @@ export function InsightsPanel({
                     <p className="text-slate-500 text-sm leading-relaxed">The AI summary will generate automatically the moment the meeting ends.</p>
                   </div>
                 ) : currentSummary ? (
-                  <div className="space-y-4 whitespace-pre-wrap text-slate-700 leading-relaxed text-[15px]">
-                    {currentSummary.contentMarkdown.split('\n').map((line: string, i: number) => {
-                      if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-bold text-slate-900 mt-8 mb-4 tracking-tight">{line.replace('## ', '')}</h2>
-                      if (line.startsWith('### ')) return <h3 key={i} className="text-lg font-bold text-slate-900 mt-6 mb-3">{line.replace('### ', '')}</h3>
-                      if (line.startsWith('- **')) return <li key={i} className="ml-5 list-disc mb-2"><span className="font-bold text-slate-900">{line.match(/\*\*(.*?)\*\*/)?.[1]}</span> {line.replace(/- \*\*(.*?)\*\*:/, '')}</li>
-                      if (line.startsWith('- ')) return <li key={i} className="ml-5 list-disc mb-2">{line.replace('- ', '')}</li>
-                      if (line.match(/^\d+\./)) return <li key={i} className="ml-5 list-decimal mb-2">{line.replace(/^\d+\.\s/, '')}</li>
-                      if (line.trim() === '') return <div key={i} className="h-2" />
-                      return <p key={i}>{line}</p>
-                    })}
+                  <div className="relative">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="absolute top-2 right-0 h-8 text-xs font-medium bg-white text-slate-600 hover:text-slate-900"
+                      onClick={handleCopyNotes}
+                    >
+                      <Copy className="w-3.5 h-3.5 mr-2" /> Copy Notes
+                    </Button>
+                    <div className="pt-2">
+                      <div className="prose prose-sm prose-slate max-w-none 
+                          prose-headings:text-slate-900 prose-headings:font-bold prose-headings:tracking-tight
+                          prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-4
+                          prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-3
+                          prose-p:text-slate-700 prose-p:leading-relaxed prose-p:text-[15px]
+                          prose-li:text-slate-700 prose-li:marker:text-slate-400
+                          prose-strong:text-slate-900 prose-strong:font-bold">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {currentSummary.contentMarkdown}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center mt-12">
@@ -262,3 +321,7 @@ export function InsightsPanel({
     </div>
   )
 }
+
+
+
+

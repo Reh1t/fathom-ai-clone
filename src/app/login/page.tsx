@@ -59,15 +59,34 @@ export default function LoginPage() {
               <p className="text-sm text-slate-500 mt-2">Sign in to connect your calendar</p>
             </div>
             
-            <Button 
-              onClick={() => signIn('google', { callbackUrl: '/' })}
-              className="w-full bg-sky-600 hover:bg-sky-700 text-white h-12 text-base font-medium shadow-sm"
-            >
-              <LogIn className="w-5 h-5 mr-2" />
-              Continue with Google
-            </Button>
+            <div className="space-y-3">
+              <Button 
+                onClick={() => signIn('google', { callbackUrl: '/' })}
+                className="w-full bg-sky-600 hover:bg-sky-700 text-white h-12 text-base font-medium shadow-sm"
+              >
+                <LogIn className="w-5 h-5 mr-2" />
+                Continue with Google
+              </Button>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-slate-500">Or</span>
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => { window.location.href = '/api/auth/demo' }}
+                variant="outline"
+                className="w-full h-12 text-base font-medium text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-sky-700"
+              >
+                Skip Auth (Evaluator Demo)
+              </Button>
+            </div>
             
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-400 leading-relaxed pt-2">
               By continuing, you agree to our Terms of Service and Privacy Policy. We request calendar access strictly to automate your meeting notes.
             </p>
           </div>

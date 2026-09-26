@@ -27,9 +27,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const reply = await aiService.chatWithMeeting(meetingId, question, history)
+    const stream = await aiService.chatWithMeeting(meetingId, question, history)
 
-    return NextResponse.json({ reply })
+    const readable = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of stream) {
+          if (chunk.text) {
+             controller.enqueue(new TextEncoder().encode(chunk.text));
+          }
+        }
+        controller.close();
+      }
+    })
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain',
+        'Transfer-Encoding': 'chunked',
+      }
+    })
   } catch (error: any) {
     console.error('Chat error:', error)
     return NextResponse.json({ error: error.message || 'Failed to process chat' }, { status: 500 })

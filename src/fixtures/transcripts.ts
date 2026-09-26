@@ -12,9 +12,13 @@ export const generateLongTranscript = (meetingId: string): TranscriptLine[] => {
   let currentTime = 0;
   const speakers = ["Alice (CEO)", "Bob (CTO)", "Charlie (CFO)", "Diana (CMO)", "Evan (VP Sales)", "Fiona (VP Eng)", "George (Product)", "Hannah (HR)"];
   
+  const targetEndTime = 3595;
+  const remainingTime = targetEndTime - 63;
+  const averageDuration = remainingTime / 200;
+
   for (let i = 0; i < 200; i++) { // ~200 lines for a dense transcript
     const speaker = speakers[i % speakers.length];
-    const duration = Math.floor(Math.random() * 10) + 5; // 5-15 seconds per line
+    const duration = Math.floor(averageDuration - 2 + Math.random() * 4); // ~15 to 19s
     
     lines.push({
       id: crypto.randomUUID(),
