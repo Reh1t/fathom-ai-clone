@@ -13,7 +13,7 @@ jest.mock('remark-gfm', () => () => {})
 
 describe('InsightsPanel Component', () => {
   const mockActionItems = [
-    { id: '1', text: 'Test Action Item', isCompleted: false, assignee: 'George' }
+    { id: '1', task: 'Test Action Item', isCompleted: false, assignee: 'George' }
   ]
 
   const mockTranscripts = [

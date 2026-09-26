@@ -15,6 +15,33 @@ export async function GET(request: Request) {
         } 
       })
       await provisionDemoWorkspace(demoUser.id)
+    } else {
+      // Check if we need to re-provision because of incomplete transcripts (from before we expanded the fixtures)
+      const existingDemoMeeting = await prisma.meeting.findFirst({
+        where: { userId: demoUser.id, isDemo: true },
+        include: {
+          transcripts: {
+            orderBy: { endTime: 'desc' },
+            take: 1
+          }
+        }
+      })
+
+      if (existingDemoMeeting) {
+        const transcriptCount = await prisma.transcriptLine.count({
+          where: { meetingId: existingDemoMeeting.id }
+        })
+        const lastLine = existingDemoMeeting.transcripts[0]
+
+        if (transcriptCount < 200 || !lastLine || lastLine.endTime < 3500) {
+          // Wipe old demo data to force re-provisioning
+          console.log('Incomplete demo data detected. Wiping and re-provisioning...')
+          await prisma.meeting.deleteMany({ where: { userId: demoUser.id, isDemo: true } })
+          await provisionDemoWorkspace(demoUser.id)
+        }
+      } else {
+        await provisionDemoWorkspace(demoUser.id)
+      }
     }
 
     const sessionToken = randomUUID()
