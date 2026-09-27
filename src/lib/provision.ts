@@ -51,7 +51,12 @@ export async function provisionDemoWorkspace(userId: string) {
           endTime: t.endTime
         }))
         .filter(t => t.meetingId)
-      await tx.transcriptLine.createMany({ data: transcriptData })
+
+      // Chunk transcript inserts to avoid SQLite limits and timeouts
+      const chunkSize = 500;
+      for (let i = 0; i < transcriptData.length; i += chunkSize) {
+        await tx.transcriptLine.createMany({ data: transcriptData.slice(i, i + chunkSize) })
+      }
 
       // Summaries
       const summaryData = summaries
@@ -72,7 +77,13 @@ export async function provisionDemoWorkspace(userId: string) {
           isCompleted: a.isCompleted
         }))
         .filter(a => a.meetingId)
-      await tx.actionItem.createMany({ data: actionItemData })
+        
+      for (let i = 0; i < actionItemData.length; i += chunkSize) {
+        await tx.actionItem.createMany({ data: actionItemData.slice(i, i + chunkSize) })
+      }
+    }, {
+      timeout: 30000,
+      maxWait: 10000
     })
 
     console.log(`Demo workspace provisioned for user ${userId}.`)

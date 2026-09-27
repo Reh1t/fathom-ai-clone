@@ -8,6 +8,20 @@ export type Summary = {
 
 export const summaries: Summary[] = [
   {
+    meetingId: "m5",
+    template: "Standard",
+    contentMarkdown: `# Q4 Product Launch Kickoff
+    
+## Executive Summary
+The team met to review the final critical path for the Q4 product launch. Engineering and Design are on track, Marketing is fully prepped, and Infra is provisioned to handle 10x traffic.
+
+## Key Decisions
+- Strict code freeze begins next Monday.
+- Load testing will occur this weekend.
+- Sales has 15 enterprise clients lined up for early access.`
+  },
+
+  {
     meetingId: "m1",
     template: "Standard",
     contentMarkdown: `## Q3 Planning Sync Overview
@@ -53,6 +67,14 @@ export type ActionItem = {
 };
 
 export const actionItems: ActionItem[] = [
+  { id: "t_m5_ai_clean_0", meetingId: "m5", task: "Finalize introductions and agenda documentation", assignee: "Sarah Chen (VP Product)", isCompleted: false },
+  { id: "t_m5_ai_clean_1", meetingId: "m5", task: "Finalize engineering status documentation", assignee: "Sarah Chen (VP Product)", isCompleted: false },
+  { id: "t_m5_ai_clean_2", meetingId: "m5", task: "Finalize design and ux review documentation", assignee: "Sarah Chen (VP Product)", isCompleted: false },
+  { id: "t_m5_ai_clean_3", meetingId: "m5", task: "Finalize marketing and gtm strategy documentation", assignee: "Sarah Chen (VP Product)", isCompleted: false },
+  { id: "t_m5_ai_clean_4", meetingId: "m5", task: "Finalize qa and testing pipeline documentation", assignee: "Sarah Chen (VP Product)", isCompleted: false },
+  { id: "t_m5_ai_clean_5", meetingId: "m5", task: "Finalize infrastructure and devops documentation", assignee: "Sarah Chen (VP Product)", isCompleted: false },
+  { id: "t_m5_ai_clean_6", meetingId: "m5", task: "Finalize data and analytics documentation", assignee: "Sarah Chen (VP Product)", isCompleted: false },
+  { id: "t_m5_ai_clean_7", meetingId: "m5", task: "Finalize sales readiness documentation", assignee: "Sarah Chen (VP Product)", isCompleted: false },
   { id: "a1", meetingId: "m1", task: "Map out headcount for migration", assignee: "Bob (CTO)", isCompleted: false },
   { id: "a2", meetingId: "m1", task: "Create resource plan", assignee: "Fiona (VP Eng)", isCompleted: true },
   { id: "a3", meetingId: "m1", task: "Finalize sales collateral", assignee: "George (Product)", isCompleted: false },

@@ -28,14 +28,13 @@ export async function GET(request: Request) {
       })
 
       if (existingDemoMeeting) {
-        const transcriptCount = await prisma.transcriptLine.count({
-          where: { meetingId: existingDemoMeeting.id }
+        const hasM5 = await prisma.meeting.findFirst({
+          where: { userId: demoUser.id, title: 'Q4 Product Launch Kickoff' }
         })
-        const lastLine = existingDemoMeeting.transcripts[0]
 
-        if (transcriptCount < 200 || !lastLine || lastLine.endTime < 3500) {
-          // Wipe old demo data to force re-provisioning
-          console.log('Incomplete demo data detected. Wiping and re-provisioning...')
+        if (!hasM5) {
+          // Wipe old demo data to force re-provisioning with m5
+          console.log('Missing m5 meeting detected. Wiping and re-provisioning...')
           await prisma.meeting.deleteMany({ where: { userId: demoUser.id, isDemo: true } })
           await provisionDemoWorkspace(demoUser.id)
         }

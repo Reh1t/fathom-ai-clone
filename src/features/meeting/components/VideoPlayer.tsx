@@ -46,6 +46,8 @@ export function VideoPlayer({ mediaUrl, isLive, transcripts = [] }: VideoPlayerP
   const lastFrameTime = useRef<number>(Date.now())
   const animationRef = useRef<number>(0)
   
+  const audioRef = useRef<HTMLAudioElement>(null)
+
   // Calculate duration
   const duration = useMemo(() => {
     if (transcripts.length === 0) return 3600;
@@ -59,7 +61,24 @@ export function VideoPlayer({ mediaUrl, isLive, transcripts = [] }: VideoPlayerP
 
   const uniqueSpeakers = useMemo(() => Array.from(new Set(transcripts.map(t => t.speaker))), [transcripts])
 
-  // Synthetic Playback Loop
+  // Sync playback speed
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate
+    }
+  }, [playbackRate])
+
+  // Sync play/pause state
+  useEffect(() => {
+    if (!audioRef.current || isLive) return
+    if (isPlaying) {
+      audioRef.current.play().catch(e => console.error("Audio play blocked", e))
+    } else {
+      audioRef.current.pause()
+    }
+  }, [isPlaying, isLive])
+
+  // Playback Loop (Synthetic vs Real Audio)
   useEffect(() => {
     if (isLive) return;
 
@@ -68,13 +87,26 @@ export function VideoPlayer({ mediaUrl, isLive, transcripts = [] }: VideoPlayerP
       const delta = (now - lastFrameTime.current) / 1000;
       lastFrameTime.current = now;
 
-      if (usePlayerStore.getState().isPlaying) {
-        const nextTime = usePlayerStore.getState().currentTime + (delta * usePlayerStore.getState().playbackRate);
-        if (nextTime >= duration) {
-          setCurrentTime(duration);
-          setIsPlaying(false);
-        } else {
-          setCurrentTime(nextTime);
+      const state = usePlayerStore.getState();
+
+      if (mediaUrl && audioRef.current) {
+        // Real audio mode: sync state to audio element
+        if (state.isPlaying) {
+          setCurrentTime(audioRef.current.currentTime);
+          if (audioRef.current.ended) {
+            setIsPlaying(false);
+          }
+        }
+      } else {
+        // Synthetic mode: math-based playback
+        if (state.isPlaying) {
+          const nextTime = state.currentTime + (delta * state.playbackRate);
+          if (nextTime >= duration) {
+            setCurrentTime(duration);
+            setIsPlaying(false);
+          } else {
+            setCurrentTime(nextTime);
+          }
         }
       }
       animationRef.current = requestAnimationFrame(loop);
@@ -86,15 +118,19 @@ export function VideoPlayer({ mediaUrl, isLive, transcripts = [] }: VideoPlayerP
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     }
-  }, [isLive, duration, setCurrentTime, setIsPlaying]);
+  }, [isLive, duration, setCurrentTime, setIsPlaying, mediaUrl]);
 
   // Handle Seek Request
   useEffect(() => {
     if (seekRequest !== null && !isLive) {
-      setCurrentTime(Math.min(seekRequest, duration))
+      const targetTime = Math.min(seekRequest, duration)
+      if (mediaUrl && audioRef.current) {
+        audioRef.current.currentTime = targetTime
+      }
+      setCurrentTime(targetTime)
       clearSeekRequest()
     }
-  }, [seekRequest, isLive, duration, setCurrentTime, clearSeekRequest])
+  }, [seekRequest, isLive, duration, setCurrentTime, clearSeekRequest, mediaUrl])
 
   const formatTime = (time: number) => {
     const m = Math.floor(time / 60).toString().padStart(2, '0');
@@ -215,6 +251,16 @@ export function VideoPlayer({ mediaUrl, isLive, transcripts = [] }: VideoPlayerP
           </div>
         )}
       </div>
+
+      {mediaUrl && (
+        <audio 
+          ref={audioRef} 
+          src={mediaUrl} 
+          preload="auto" 
+          className="hidden" 
+          onEnded={() => setIsPlaying(false)}
+        />
+      )}
     </div>
   )
 }

@@ -64,5 +64,23 @@ export const meetings: Meeting[] = [
       { name: "Mia (Dev)" },
     ],
     mediaUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+  },
+  {
+    id: "m5",
+    title: "Q4 Product Launch Kickoff",
+    date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(), // 1 day ago
+    duration: "60:00",
+    status: "recorded",
+    attendees: [
+      { name: "Sarah Chen (VP Product)" },
+      { name: "Marcus Johnson (Engineering)" },
+      { name: "Priya Patel (Design)" },
+      { name: "David Kim (Marketing)" },
+      { name: "Rachel Torres (QA)" },
+      { name: "James Wright (DevOps)" },
+      { name: "Aisha Mohammed (Data)" },
+      { name: "Tom Bradley (Sales)" }
+    ],
+    mediaUrl: "/audio/launch-meeting.mp3",
   }
 ];
