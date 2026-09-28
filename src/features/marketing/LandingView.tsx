@@ -33,11 +33,16 @@ export function LandingView() {
           Never manually type meeting minutes again. Fathom AI autonomously joins your calendar events, captures the audio, and generates crisp, actionable intelligence.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Link href="/login">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <Link href="/api/auth/demo">
             <Button size="lg" className="bg-sky-600 hover:bg-sky-700 text-white h-14 px-8 text-lg shadow-md font-medium">
+              Explore Live Demo Workspace — No Login Required
+            </Button>
+          </Link>
+          <Link href="/login">
+            <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-medium border-slate-200 text-slate-700 hover:bg-slate-50">
               <LogIn className="w-5 h-5 mr-2" />
-              Get Started with Google
+              Sign in with Google
             </Button>
           </Link>
         </div>

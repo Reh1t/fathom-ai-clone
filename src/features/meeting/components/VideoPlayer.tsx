@@ -72,11 +72,11 @@ export function VideoPlayer({ mediaUrl, isLive, transcripts = [] }: VideoPlayerP
   useEffect(() => {
     if (!audioRef.current || isLive) return
     if (isPlaying) {
-      audioRef.current.play().catch(e => console.error("Audio play blocked", e))
+      audioRef.current.play().catch(e => { console.error("Audio play blocked", e); setIsPlaying(false); })
     } else {
       audioRef.current.pause()
     }
-  }, [isPlaying, isLive])
+  }, [isPlaying, isLive, setIsPlaying])
 
   // Playback Loop (Synthetic vs Real Audio)
   useEffect(() => {
